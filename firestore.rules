@@ -65,6 +65,22 @@ service cloud.firestore {
                       (resource.data.riderId == null && request.resource.data.riderId == request.auth.uid)
                     );
     }
+
+    // --- NOTIFICATIONS COLLECTION ---
+    match /notifications/{notificationId} {
+      // Allow authenticated users to create notifications
+      allow create: if request.auth != null && isCollegeEmail();
+      
+      // Allow reading own notifications
+      allow read: if request.auth != null 
+                  && resource.data.userId == request.auth.uid;
+      
+      // Cloud Functions can update (mark as sent)
+      allow update: if request.auth != null;
+      
+      // No deletes
+      allow delete: if false;
+    }
     
     // Default Deny
     match /{document=**} {

@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import '../../../../core/constants/college_domains.dart';
+import '../../../../core/services/notification_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   final AuthService _authService = AuthService();
+  final NotificationService _notificationService = NotificationService();
 
   User? _user;
   User? get user => _user;
@@ -18,6 +20,10 @@ class AuthProvider extends ChangeNotifier {
   AuthProvider() {
     _authService.authStateChanges.listen((User? user) {
       _user = user;
+      // Save FCM token when user logs in
+      if (user != null) {
+        _notificationService.saveTokenToDatabase(user.uid);
+      }
       notifyListeners();
     });
   }

@@ -136,28 +136,25 @@ class _RideHomeScreenState extends State<RideHomeScreen> {
     String selectedZone = 'Central';
     RideTime selectedTime = RideTime.now;
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: StatefulBuilder(
-          builder: (context, setState) {
-            return Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.location_on,
-                  size: 64,
-                  color: AppColors.primary,
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  AppStrings.requestRide,
-                  style: Theme.of(context).textTheme.displayMedium,
-                ),
-                const SizedBox(height: 32),
-
-                // Zone Selection
-                DropdownButtonFormField<String>(
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24.0),
+      child: StatefulBuilder(
+        builder: (context, setState) {
+          return Column(
+            children: [
+              const SizedBox(height: 20),
+              const Icon(
+                Icons.location_on,
+                size: 64,
+                color: AppColors.primary,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                AppStrings.requestRide,
+                style: Theme.of(context).textTheme.displayMedium,
+              ),
+              const SizedBox(height: 24),
+              DropdownButtonFormField<String>(
                   value: selectedZone,
                   decoration: InputDecoration(
                     labelText: 'Pickup Zone',
@@ -260,12 +257,12 @@ class _RideHomeScreenState extends State<RideHomeScreen> {
                             ),
                           )
                         : const Text(AppStrings.findRider),
-                  ),
                 ),
-              ],
-            );
-          },
-        ),
+              ),
+              const SizedBox(height: 20),
+            ],
+          );
+        },
       ),
     );
   }

@@ -198,6 +198,12 @@ class RideProvider extends ChangeNotifier {
         final newDeclined = List<String>.from(ride.declinedRiderIds)
           ..add(selectedRider.id);
 
+        // Notify student that rider skipped
+        await _notificationService.notifyStudentOfRiderSkipped(
+          studentId: ride.studentId,
+          rideId: ride.id,
+        );
+
         ride = ride.copyWith(
           status: RideStatus.searching,
           riderId: null,
@@ -222,7 +228,18 @@ class RideProvider extends ChangeNotifier {
       reason,
       userId,
     );
-    _activeRide = null; // Clear local logic immediately
+    
+    // Notify rider if ride was already assigned
+    if (ride.riderId != null && ride.status == RideStatus.accepted) {
+      await _notificationService.notifyRiderOfCancellation(
+        riderId: ride.riderId!,
+        studentName: ride.studentName,
+      );
+      // Restore rider availability
+      await _profileService.updateAvailability(ride.riderId!, true);
+    }
+    
+    _activeRide = null;
     notifyListeners();
   }
 
@@ -232,8 +249,13 @@ class RideProvider extends ChangeNotifier {
       await _rideService.completeRide(ride.id, ride.riderId!);
       // Restore rider availability after completion
       await _profileService.updateAvailability(ride.riderId!, true);
+      
+      // Notify student of completion
+      await _notificationService.notifyRideCompleted(
+        userId: ride.studentId,
+        otherUserName: ride.riderName ?? 'Rider',
+      );
     } else {
-      // Fallback if somehow null (should not happen for active ride)
       await _rideService.updateRideStatus(ride.id, RideStatus.completed);
     }
   }

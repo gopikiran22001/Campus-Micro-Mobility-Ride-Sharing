@@ -15,6 +15,7 @@ class UserProfile {
   final int reputationScore; // Fair Matching
   final DateTime? lastRideCompletedAt; // Riders Cooldown Logic
   final String zone; // Zone for proximity matching
+  final String? fcmToken; // Firebase Cloud Messaging token
 
   UserProfile({
     required this.id,
@@ -31,6 +32,7 @@ class UserProfile {
     this.reputationScore = 100,
     this.lastRideCompletedAt,
     this.zone = 'Central',
+    this.fcmToken,
   });
 
   Map<String, dynamic> toMap() {
@@ -49,6 +51,7 @@ class UserProfile {
       'reputationScore': reputationScore,
       'lastRideCompletedAt': lastRideCompletedAt?.toIso8601String(),
       'zone': zone,
+      'fcmToken': fcmToken,
     };
   }
 
@@ -73,6 +76,7 @@ class UserProfile {
           ? DateTime.parse(map['lastRideCompletedAt'])
           : null,
       zone: map['zone'] ?? 'Central',
+      fcmToken: map['fcmToken'],
     );
   }
 
@@ -89,6 +93,7 @@ class UserProfile {
     int? reputationScore,
     DateTime? lastRideCompletedAt,
     String? zone,
+    String? fcmToken,
   }) {
     return UserProfile(
       id: id,
@@ -105,6 +110,7 @@ class UserProfile {
       reputationScore: reputationScore ?? this.reputationScore,
       lastRideCompletedAt: lastRideCompletedAt ?? this.lastRideCompletedAt,
       zone: zone ?? this.zone,
+      fcmToken: fcmToken ?? this.fcmToken,
     );
   }
 }

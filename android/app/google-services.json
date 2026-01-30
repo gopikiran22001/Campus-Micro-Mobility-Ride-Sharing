@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "21462264923",
+    "project_id": "campus-micro-mobility",
+    "storage_bucket": "campus-micro-mobility.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:21462264923:android:6ddff826e534c70a0b637e",
+        "android_client_info": {
+          "package_name": "com.example.campus_micro_mbility_and_rid_sharing"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "21462264923-nj5uievajdh8r4ep7udbd3fal2ls43d1.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.campus_micro_mbility_and_rid_sharing",
+            "certificate_hash": "a008f770221596dd2b15df0836abd22feefa0fb3"
+          }
+        },
+        {
+          "client_id": "21462264923-epjtlmgsrieen5d8g6o0tvkapb3avf09.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDvSX8lTorwDxHLEmQujtH726cYE8yiZ-M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "21462264923-epjtlmgsrieen5d8g6o0tvkapb3avf09.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "21462264923-au5cm958mr5uor2ekgsl509f58ejhtbt.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.campusMicroMbilityAndRidSharing"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

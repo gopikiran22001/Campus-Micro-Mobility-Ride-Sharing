@@ -2,9 +2,9 @@
 trigger: always_on
 ---
 
-# 🚫 No‑Shortcuts Coding Rules (Strict Mode)
+# 🚫 No-Shortcuts Coding Rules (Strict Mode)
 
-Use these rules **verbatim** in your IDE / AI coding assistant to enforce **complete, production‑ready code**.
+Use these rules **verbatim** in your IDE / AI coding assistant to enforce **complete, production-ready code**.
 
 ---
 
@@ -12,14 +12,14 @@ Use these rules **verbatim** in your IDE / AI coding assistant to enforce **comp
 
 - **Do NOT use placeholders**
   - No `TODO`, `FIXME`, `later`, `dummy`, `mock`, `sample`
-  - No commented‑out incomplete code
+  - No commented-out incomplete code
 
 - **Do NOT use fallback logic**
   - No “return null for now”
   - No “handle later”
   - No default or fake values unless explicitly requested
 
-- **No pseudo‑code**
+- **No pseudo-code**
   - All code must be real, executable code
 
 ---
@@ -28,10 +28,10 @@ Use these rules **verbatim** in your IDE / AI coding assistant to enforce **comp
 
 - **Always write FULL implementations**
   - Every function must be fully implemented
-  - Every class must be usable as‑is
+  - Every class must be usable as-is
   - No partial or stub logic
 
-- **Production‑ready only**
+- **Production-ready only**
   - Code must compile and run without modification
   - Include all required imports, dependencies, and configurations
   - Follow framework and language best practices
@@ -56,7 +56,7 @@ Use these rules **verbatim** in your IDE / AI coding assistant to enforce **comp
 
 ---
 
-## 🚀 End‑to‑End Completeness
+## 🚀 End-to-End Completeness
 
 If implementing a feature, **ALL of the following must be included**:
 - Models
@@ -65,8 +65,23 @@ If implementing a feature, **ALL of the following must be included**:
 - Validation
 - Integration points
 
-No “example‑only” or tutorial code.  
+No “example-only” or tutorial code.  
 Code must be suitable for real application usage.
+
+---
+
+## 🔍 Mandatory Static Analysis
+
+- **Always run `flutter analyze`**
+  - Must be executed **after every prompt execution**
+  - Code is considered **incomplete** if `flutter analyze` reports:
+    - Errors
+    - Warnings
+    - Lints
+  - All issues **must be fixed**, not ignored or suppressed
+  - Do **NOT** use `// ignore`, `// ignore_for_file`, or lint suppression unless explicitly approved
+
+> **Final output is valid only when `flutter analyze` passes with zero issues.**
 
 ---
 
@@ -81,5 +96,3 @@ Code must be suitable for real application usage.
 ## 🛑 Final Enforcement Rule
 
 > **If you cannot fully implement any part, STOP and ask for clarification instead of guessing.**
-
----

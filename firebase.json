@@ -1,1 +1,46 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"campus-micro-mobility","appId":"1:21462264923:android:6ddff826e534c70a0b637e","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"campus-micro-mobility","configurations":{"android":"1:21462264923:android:6ddff826e534c70a0b637e","ios":"1:21462264923:ios:27cb8801f844d2d80b637e","macos":"1:21462264923:ios:27cb8801f844d2d80b637e","web":"1:21462264923:web:98c028d6083f85da0b637e","windows":"1:21462264923:web:ba5825176ab37f8f0b637e"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "campus-micro-mobility",
+          "appId": "1:21462264923:android:6ddff826e534c70a0b637e",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "campus-micro-mobility",
+          "configurations": {
+            "android": "1:21462264923:android:6ddff826e534c70a0b637e",
+            "ios": "1:21462264923:ios:27cb8801f844d2d80b637e",
+            "macos": "1:21462264923:ios:27cb8801f844d2d80b637e",
+            "web": "1:21462264923:web:98c028d6083f85da0b637e",
+            "windows": "1:21462264923:web:ba5825176ab37f8f0b637e"
+          }
+        }
+      }
+    }
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "disallowLegacyRuntimeConfig": true,
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ],
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" run lint"
+      ]
+    }
+  ],
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  }
+}

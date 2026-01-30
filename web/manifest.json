@@ -1,11 +1,11 @@
 {
-    "name": "campus_micro_mbility_and_rid_sharing",
-    "short_name": "campus_micro_mbility_and_rid_sharing",
+    "name": "CampusGo",
+    "short_name": "CampusGo",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "CampusGo",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

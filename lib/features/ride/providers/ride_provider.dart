@@ -4,12 +4,16 @@ import 'package:uuid/uuid.dart';
 import '../models/ride_model.dart';
 import '../services/ride_service.dart';
 import '../../profile/services/profile_service.dart';
+import '../../profile/models/user_profile.dart';
 import '../../../core/services/notification_service.dart';
+import '../../../core/services/osm_map_service.dart';
+import '../../../core/models/location_point.dart';
 
 class RideProvider extends ChangeNotifier {
   final RideService _rideService = RideService();
   final ProfileService _profileService = ProfileService();
   final NotificationService _notificationService = NotificationService();
+  final OsmMapService _mapService = OsmMapService();
 
   Ride? _activeRide;
   Ride? get activeRide => _activeRide;
@@ -80,30 +84,35 @@ class RideProvider extends ChangeNotifier {
     required String collegeDomain,
     required String zone,
     required RideTime requestedTime,
+    required VehicleType vehicleType,
+    int requestedSeats = 1,
+    LocationPoint? pickupPoint,
+    LocationPoint? destinationPoint,
   }) async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      // 1. Create Ride Object
       final newRide = Ride(
         id: const Uuid().v4(),
         studentId: studentId,
         studentName: studentName,
-        origin: 'Current Location', // Placeholder
+        origin: 'Current Location',
         destination: destination,
         zone: zone,
+        vehicleType: vehicleType,
+        requestedSeats: requestedSeats,
         requestedTime: requestedTime,
         status: RideStatus.searching,
         createdAt: DateTime.now(),
-        matchingStartedAt: DateTime.now(), // Start timeout tracking
+        matchingStartedAt: DateTime.now(),
+        pickupPoint: pickupPoint,
+        destinationPoint: destinationPoint,
       );
 
       await _rideService.createRide(newRide);
-      // Optimistic update not needed as stream will catch it, but good for UX
       _activeRide = newRide;
 
-      // 2. Start Matching Process
       await _findAndAssignRider(newRide, collegeDomain);
     } catch (e) {
       debugPrint('Error requesting ride: $e');
@@ -131,7 +140,11 @@ class RideProvider extends ChangeNotifier {
       }
 
       // Get available riders in the same zone
-      final riders = await _profileService.getAvailableRiders(collegeDomain);
+      final riders = await _profileService.getAvailableRiders(
+        collegeDomain,
+        vehicleType: ride.vehicleType,
+        requiredSeats: ride.requestedSeats,
+      );
 
       // Filter by zone and declined list
       final candidates = riders
@@ -140,7 +153,35 @@ class RideProvider extends ChangeNotifier {
           )
           .toList();
 
-      if (candidates.isEmpty) {
+      final routeFilteredCandidates = <UserProfile>[];
+      if (ride.pickupPoint != null && ride.destinationPoint != null) {
+        for (var rider in candidates) {
+          if (rider.activeRoute != null) {
+            final routePolyline = _mapService.decodePolyline(
+              rider.activeRoute!.encodedPolyline,
+            );
+            final pickupNearRoute = _mapService.isPointNearRoute(
+              ride.pickupPoint!,
+              routePolyline,
+              500,
+            );
+            final destinationNearRoute = _mapService.isPointNearRoute(
+              ride.destinationPoint!,
+              routePolyline,
+              500,
+            );
+            if (pickupNearRoute && destinationNearRoute) {
+              routeFilteredCandidates.add(rider);
+            }
+          }
+        }
+      }
+
+      final finalCandidates = routeFilteredCandidates.isNotEmpty
+          ? routeFilteredCandidates
+          : candidates;
+
+      if (finalCandidates.isEmpty) {
         // No riders available - mark as no_match
         await _rideService.updateRideStatus(ride.id, RideStatus.no_match);
         _activeRide = ride.copyWith(status: RideStatus.no_match);
@@ -154,7 +195,7 @@ class RideProvider extends ChangeNotifier {
       }
 
       // Pick first eligible rider (already sorted by fairness in service)
-      final selectedRider = candidates.first;
+      final selectedRider = finalCandidates.first;
 
       // Update Ride with rider assignment and request timestamp
       await _rideService.assignRiderWithTimestamp(
@@ -229,14 +270,17 @@ class RideProvider extends ChangeNotifier {
       userId,
     );
     
-    // Notify rider if ride was already assigned
     if (ride.riderId != null && ride.status == RideStatus.accepted) {
       await _notificationService.notifyRiderOfCancellation(
         riderId: ride.riderId!,
         studentName: ride.studentName,
       );
-      // Restore rider availability
-      await _profileService.updateAvailability(ride.riderId!, true);
+      
+      if (ride.vehicleType == VehicleType.car) {
+        await _profileService.restoreSeats(ride.riderId!, ride.requestedSeats);
+      } else {
+        await _profileService.updateAvailability(ride.riderId!, true);
+      }
     }
     
     _activeRide = null;
@@ -247,10 +291,13 @@ class RideProvider extends ChangeNotifier {
   Future<void> completeRide(Ride ride) async {
     if (ride.riderId != null) {
       await _rideService.completeRide(ride.id, ride.riderId!);
-      // Restore rider availability after completion
-      await _profileService.updateAvailability(ride.riderId!, true);
       
-      // Notify student of completion
+      if (ride.vehicleType == VehicleType.car) {
+        await _profileService.restoreSeats(ride.riderId!, ride.requestedSeats);
+      } else {
+        await _profileService.updateAvailability(ride.riderId!, true);
+      }
+      
       await _notificationService.notifyRideCompleted(
         userId: ride.studentId,
         otherUserName: ride.riderName ?? 'Rider',
@@ -264,13 +311,14 @@ class RideProvider extends ChangeNotifier {
   Future<void> acceptRide(Ride ride) async {
     if (ride.riderId == null) return;
 
-    // 1. Update ride status
     await _rideService.updateRideStatus(ride.id, RideStatus.accepted);
 
-    // 2. Set rider as unavailable (busy)
-    await _profileService.updateAvailability(ride.riderId!, false);
+    if (ride.vehicleType == VehicleType.car) {
+      await _profileService.deductSeats(ride.riderId!, ride.requestedSeats);
+    } else {
+      await _profileService.updateAvailability(ride.riderId!, false);
+    }
 
-    // 3. Notify student of acceptance
     final rider = await _profileService.getUserProfile(ride.riderId!);
     if (rider != null) {
       await _notificationService.notifyStudentOfAcceptance(
@@ -309,5 +357,15 @@ class RideProvider extends ChangeNotifier {
         declinedRiderIds: newDeclined,
       ),
     ); // Overwrite with new state
+  }
+
+  Future<void> setRiderRoute(String riderId, RiderRoute route) async {
+    await _profileService.updateRiderRoute(riderId, route);
+    notifyListeners();
+  }
+
+  Future<void> clearRiderRoute(String riderId) async {
+    await _profileService.clearRiderRoute(riderId);
+    notifyListeners();
   }
 }

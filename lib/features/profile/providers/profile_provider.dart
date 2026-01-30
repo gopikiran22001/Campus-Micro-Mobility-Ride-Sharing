@@ -11,13 +11,18 @@ class ProfileProvider extends ChangeNotifier {
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
+  String? _error;
+  String? get error => _error;
+
   Future<void> loadProfile(String userId) async {
     _isLoading = true;
+    _error = null;
     notifyListeners();
 
     try {
       _profile = await _profileService.getProfile(userId);
     } catch (e) {
+      _error = 'Failed to load profile: $e';
       debugPrint('Error loading profile: $e');
     } finally {
       _isLoading = false;
@@ -27,12 +32,31 @@ class ProfileProvider extends ChangeNotifier {
 
   Future<void> createOrUpdateProfile(UserProfile profile) async {
     _isLoading = true;
+    _error = null;
     notifyListeners();
     try {
       await _profileService.createProfile(profile);
       _profile = profile;
     } catch (e) {
+      _error = 'Failed to save profile: $e';
       debugPrint('Error creating profile: $e');
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> updateProfile(UserProfile profile) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    try {
+      await _profileService.updateProfile(profile);
+      _profile = profile;
+    } catch (e) {
+      _error = 'Failed to update profile: $e';
+      debugPrint('Error updating profile: $e');
       rethrow;
     } finally {
       _isLoading = false;
@@ -45,19 +69,23 @@ class ProfileProvider extends ChangeNotifier {
 
     final updatedProfile = _profile!.copyWith(
       isRiderMode: isActive,
-      isAvailable: isActive, // Default to available if mode is active
+      isAvailable: isActive,
     );
 
-    // Optimistic update
     _profile = updatedProfile;
     notifyListeners();
 
     try {
       await _profileService.updateProfile(updatedProfile);
     } catch (e) {
-      // Revert if error
       _profile = _profile!.copyWith(isRiderMode: !isActive);
+      _error = 'Failed to toggle rider mode: $e';
       notifyListeners();
     }
+  }
+
+  void clearError() {
+    _error = null;
+    notifyListeners();
   }
 }

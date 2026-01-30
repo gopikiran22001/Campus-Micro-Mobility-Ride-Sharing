@@ -24,6 +24,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
 
   bool _hasVehicle = false;
   VehicleType _vehicleType = VehicleType.none;
+  int _carSeats = 4;
   bool _isLoading = false;
 
   @override
@@ -58,6 +59,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         collegeDomain: user.email!.split('@').last,
         hasVehicle: _hasVehicle,
         vehicleType: _hasVehicle ? _vehicleType : VehicleType.none,
+        carSeats: _hasVehicle && _vehicleType == VehicleType.car ? _carSeats : null,
+        availableSeats: _hasVehicle && _vehicleType == VehicleType.car ? _carSeats : null,
         isRiderMode: false,
         isAvailable: false,
       );
@@ -159,7 +162,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   children: [
                     Expanded(
                       child: RadioListTile<VehicleType>(
-                        title: const Text(AppStrings.vehicleBike),
+                        title: const Text('Bike'),
                         value: VehicleType.bike,
                         groupValue: _vehicleType,
                         onChanged: (val) => setState(() => _vehicleType = val!),
@@ -167,14 +170,38 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                     ),
                     Expanded(
                       child: RadioListTile<VehicleType>(
-                        title: const Text(AppStrings.vehicleScooter),
-                        value: VehicleType.scooter,
+                        title: const Text('Car'),
+                        value: VehicleType.car,
                         groupValue: _vehicleType,
                         onChanged: (val) => setState(() => _vehicleType = val!),
                       ),
                     ),
                   ],
                 ),
+                if (_vehicleType == VehicleType.car) ...[
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<int>(
+                    value: _carSeats,
+                    decoration: InputDecoration(
+                      labelText: 'Number of Seats',
+                      prefixIcon: const Icon(Icons.event_seat),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 1, child: Text('1 seat')),
+                      DropdownMenuItem(value: 2, child: Text('2 seats')),
+                      DropdownMenuItem(value: 3, child: Text('3 seats')),
+                      DropdownMenuItem(value: 4, child: Text('4 seats')),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() => _carSeats = value);
+                      }
+                    },
+                  ),
+                ],
               ],
 
               const SizedBox(height: 48),

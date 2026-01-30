@@ -5,6 +5,8 @@ import '../../features/auth/screens/signup_screen.dart';
 import '../../features/auth/screens/verify_email_screen.dart';
 import '../../features/ride/screens/ride_home_screen.dart';
 import '../../features/profile/screens/profile_setup_screen.dart';
+import '../../features/profile/screens/view_profile_screen.dart';
+import '../../features/profile/screens/edit_profile_screen.dart';
 
 class AppRouter {
   final AuthProvider authProvider;
@@ -28,6 +30,14 @@ class AppRouter {
       GoRoute(
         path: '/profile-setup',
         builder: (context, state) => const ProfileSetupScreen(),
+      ),
+      GoRoute(
+        path: '/profile',
+        builder: (context, state) => const ViewProfileScreen(),
+      ),
+      GoRoute(
+        path: '/edit-profile',
+        builder: (context, state) => const EditProfileScreen(),
       ),
       GoRoute(path: '/', builder: (context, state) => const RideHomeScreen()),
     ],

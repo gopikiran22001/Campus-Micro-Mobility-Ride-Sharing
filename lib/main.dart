@@ -8,6 +8,7 @@ import 'core/services/notification_service.dart';
 import 'features/auth/providers/auth_provider.dart';
 import 'features/profile/providers/profile_provider.dart';
 import 'features/ride/providers/ride_provider.dart';
+import 'features/ride/providers/osm_ride_tracking_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,6 +26,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => ProfileProvider()),
         ChangeNotifierProvider(create: (_) => RideProvider()),
+        ChangeNotifierProvider(create: (_) => RideTrackingProvider()),
       ],
       child: const MyApp(),
     ),

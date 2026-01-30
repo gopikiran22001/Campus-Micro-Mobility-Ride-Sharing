@@ -1,3 +1,6 @@
+import '../../profile/models/user_profile.dart';
+import '../../../core/models/location_point.dart';
+
 enum RideStatus {
   searching, // Looking for riders
   requested, // Waiting for specific rider response
@@ -22,16 +25,20 @@ class Ride {
   final String? riderName;
   final String origin;
   final String destination;
-  final String zone; // Zone-based matching
+  final LocationPoint? pickupPoint;
+  final LocationPoint? destinationPoint;
+  final String zone;
+  final VehicleType vehicleType;
+  final int requestedSeats;
   final RideStatus status;
-  final RideTime requestedTime; // Now or Soon
+  final RideTime requestedTime;
   final DateTime createdAt;
   final DateTime? completedAt;
-  final DateTime? matchingStartedAt; // For timeout tracking
-  final DateTime? requestSentAt; // When request sent to rider
-  final String? cancellationReason; // Cancellation tracking
-  final String? cancelledBy; // studentId or riderId
-  final List<String> declinedRiderIds; // To avoid re-matching same rider
+  final DateTime? matchingStartedAt;
+  final DateTime? requestSentAt;
+  final String? cancellationReason;
+  final String? cancelledBy;
+  final List<String> declinedRiderIds;
 
   Ride({
     required this.id,
@@ -41,7 +48,11 @@ class Ride {
     this.riderName,
     required this.origin,
     required this.destination,
+    this.pickupPoint,
+    this.destinationPoint,
     required this.zone,
+    required this.vehicleType,
+    this.requestedSeats = 1,
     this.status = RideStatus.searching,
     this.requestedTime = RideTime.now,
     required this.createdAt,
@@ -51,7 +62,14 @@ class Ride {
     this.cancellationReason,
     this.cancelledBy,
     this.declinedRiderIds = const [],
-  });
+  })  : assert(
+          vehicleType != VehicleType.bike || requestedSeats == 1,
+          'Bike rides must request exactly 1 seat',
+        ),
+        assert(
+          requestedSeats >= 1,
+          'Must request at least 1 seat',
+        );
 
   Map<String, dynamic> toMap() {
     return {
@@ -62,7 +80,11 @@ class Ride {
       'riderName': riderName,
       'origin': origin,
       'destination': destination,
+      'pickupPoint': pickupPoint?.toMap(),
+      'destinationPoint': destinationPoint?.toMap(),
       'zone': zone,
+      'vehicleType': vehicleType.name,
+      'requestedSeats': requestedSeats,
       'status': status.name,
       'requestedTime': requestedTime.name,
       'createdAt': createdAt.toIso8601String(),
@@ -84,7 +106,18 @@ class Ride {
       riderName: map['riderName'],
       origin: map['origin'] ?? '',
       destination: map['destination'] ?? '',
+      pickupPoint: map['pickupPoint'] != null
+          ? LocationPoint.fromMap(map['pickupPoint'])
+          : null,
+      destinationPoint: map['destinationPoint'] != null
+          ? LocationPoint.fromMap(map['destinationPoint'])
+          : null,
       zone: map['zone'] ?? 'Central',
+      vehicleType: VehicleType.values.firstWhere(
+        (e) => e.name == map['vehicleType'],
+        orElse: () => VehicleType.bike,
+      ),
+      requestedSeats: map['requestedSeats'] ?? 1,
       status: RideStatus.values.firstWhere(
         (e) => e.name == map['status'],
         orElse: () => RideStatus.searching,
@@ -128,7 +161,11 @@ class Ride {
       riderName: riderName ?? this.riderName,
       origin: origin,
       destination: destination,
+      pickupPoint: pickupPoint,
+      destinationPoint: destinationPoint,
       zone: zone,
+      vehicleType: vehicleType,
+      requestedSeats: requestedSeats,
       status: status ?? this.status,
       requestedTime: requestedTime,
       createdAt: createdAt,

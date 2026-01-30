@@ -22,8 +22,8 @@ class AppStrings {
   static const String deptLabel = 'Department';
   static const String yearLabel = 'Year';
   static const String vehicleLabel = 'Do you have a vehicle?';
-  static const String vehicleScooter = 'Scooter';
-  static const String vehicleBike = 'Motorbike';
+  static const String vehicleCar = 'Car';
+  static const String vehicleBike = 'Bike';
   static const String vehicleNone = 'No Vehicle';
   static const String profileSave = 'Save Profile';
 

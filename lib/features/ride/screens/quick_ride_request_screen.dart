@@ -39,29 +39,39 @@ class _QuickRideRequestScreenState extends State<QuickRideRequestScreen> {
   @override
   void initState() {
     super.initState();
-    developer.log('\n', name: 'QuickRideRequestScreen');
-    developer.log('═══════════════════════════════════════', name: 'QuickRideRequestScreen');
-    developer.log('🚀 QuickRideRequestScreen.initState() STARTED', name: 'QuickRideRequestScreen');
-    developer.log('═══════════════════════════════════════', name: 'QuickRideRequestScreen');
-    _initializePickupLocation();
+    developer.log('\n🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴', name: 'QuickRideRequestScreen');
+    developer.log('🔴 MAP SCREEN initState() CALLED', name: 'QuickRideRequestScreen');
+    developer.log('🔴 This is the MAP screen with location tracking', name: 'QuickRideRequestScreen');
+    developer.log('🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴', name: 'QuickRideRequestScreen');
     _searchFocusNode.addListener(() {
       setState(() {
         _showSearchResults = _searchFocusNode.hasFocus && _searchResults.isNotEmpty;
       });
     });
-    developer.log('═══════════════════════════════════════', name: 'QuickRideRequestScreen');
-    developer.log('🏁 QuickRideRequestScreen.initState() COMPLETED', name: 'QuickRideRequestScreen');
-    developer.log('═══════════════════════════════════════\n', name: 'QuickRideRequestScreen');
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      developer.log('\n🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠', name: 'QuickRideRequestScreen');
+      developer.log('🟠 PostFrameCallback - NOW STARTING LOCATION TRACKING', name: 'QuickRideRequestScreen');
+      developer.log('🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠', name: 'QuickRideRequestScreen');
+      _initializePickupLocation();
+    });
+    developer.log('🔴 MAP SCREEN initState() COMPLETED (location will start in PostFrameCallback)', name: 'QuickRideRequestScreen');
+    developer.log('🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴\n', name: 'QuickRideRequestScreen');
   }
 
   Future<void> _initializePickupLocation() async {
+    developer.log('\n🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡', name: 'LocationTracking');
+    developer.log('🟡 _initializePickupLocation() STARTED', name: 'LocationTracking');
+    developer.log('🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡', name: 'LocationTracking');
     setState(() {
       _isLoadingLocation = true;
       _locationError = null;
     });
 
+    developer.log('📍 Checking location permissions...', name: 'LocationTracking');
     final hasPermission = await _locationService.checkPermissions();
+    developer.log('📍 Permission result: $hasPermission', name: 'LocationTracking');
     if (!hasPermission) {
+      developer.log('❌ Location permission DENIED', name: 'LocationTracking');
       setState(() {
         _isLoadingLocation = false;
         _locationError = 'Location permission denied';
@@ -69,8 +79,11 @@ class _QuickRideRequestScreenState extends State<QuickRideRequestScreen> {
       return;
     }
 
+    developer.log('📍 Getting current location...', name: 'LocationTracking');
     final location = await _locationService.getCurrentLocation();
+    developer.log('📍 Location result: ${location?.latitude}, ${location?.longitude}', name: 'LocationTracking');
     if (location == null) {
+      developer.log('❌ Unable to get location', name: 'LocationTracking');
       setState(() {
         _isLoadingLocation = false;
         _locationError = 'Unable to get location';
@@ -79,10 +92,12 @@ class _QuickRideRequestScreenState extends State<QuickRideRequestScreen> {
     }
 
     try {
+      developer.log('🗺️ Reverse geocoding location...', name: 'LocationTracking');
       final pickupPoint = await _mapService.reverseGeocode(
         location.latitude,
         location.longitude,
       );
+      developer.log('🗺️ Reverse geocode result: ${pickupPoint.displayName}', name: 'LocationTracking');
       
       if (mounted) {
         setState(() {
@@ -90,8 +105,10 @@ class _QuickRideRequestScreenState extends State<QuickRideRequestScreen> {
           _isLoadingLocation = false;
         });
         _addPickupMarker(pickupPoint);
+        developer.log('✅ Location tracking completed successfully', name: 'LocationTracking');
       }
     } catch (e) {
+      developer.log('❌ Reverse geocode failed: $e', name: 'LocationTracking');
       if (mounted) {
         setState(() {
           _isLoadingLocation = false;
@@ -99,6 +116,8 @@ class _QuickRideRequestScreenState extends State<QuickRideRequestScreen> {
         });
       }
     }
+    developer.log('🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡', name: 'LocationTracking');
+    developer.log('🟡 _initializePickupLocation() COMPLETED\n', name: 'LocationTracking');
   }
 
   void _addPickupMarker(LocationPoint location) {
@@ -229,16 +248,17 @@ class _QuickRideRequestScreenState extends State<QuickRideRequestScreen> {
 
   @override
   Widget build(BuildContext context) {
-    developer.log('\n', name: 'QuickRideRequestScreen');
-    developer.log('═══════════════════════════════════════', name: 'QuickRideRequestScreen');
-    developer.log('🗺️ QuickRideRequestScreen.build() CALLED', name: 'QuickRideRequestScreen');
-    developer.log('   - _isLoadingLocation: $_isLoadingLocation', name: 'QuickRideRequestScreen');
-    developer.log('   - _locationError: ${_locationError ?? "NONE"}', name: 'QuickRideRequestScreen');
-    developer.log('   - _currentPickupLocation: ${_currentPickupLocation?.displayName ?? "NULL"}', name: 'QuickRideRequestScreen');
-    developer.log('   - _destinationLocation: ${_destinationLocation?.displayName ?? "NULL"}', name: 'QuickRideRequestScreen');
-    developer.log('═══════════════════════════════════════\n', name: 'QuickRideRequestScreen');
+    developer.log('🔴 MAP SCREEN build() called', name: 'QuickRideRequestScreen');
+    
     return Scaffold(
       resizeToAvoidBottomInset: false,
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text('Select Destination'),
+      ),
       body: _isLoadingLocation
           ? const Center(child: CircularProgressIndicator())
           : _locationError != null
@@ -270,7 +290,7 @@ class _QuickRideRequestScreenState extends State<QuickRideRequestScreen> {
                           initialCenter: _currentPickupLocation != null
                               ? LatLng(_currentPickupLocation!.latitude, _currentPickupLocation!.longitude)
                               : _defaultCenter,
-                          initialZoom: 16,
+                          initialZoom: 17,
                           onTap: (_, __) {
                             FocusScope.of(context).unfocus();
                             setState(() => _showSearchResults = false);
@@ -299,6 +319,7 @@ class _QuickRideRequestScreenState extends State<QuickRideRequestScreen> {
                       ),
                       SafeArea(
                         child: Column(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Container(
                               margin: const EdgeInsets.all(16),
@@ -320,7 +341,7 @@ class _QuickRideRequestScreenState extends State<QuickRideRequestScreen> {
                                     child: TextField(
                                       controller: _searchController,
                                       focusNode: _searchFocusNode,
-                                      style: const TextStyle(color: Colors.black87, fontSize: 16),
+                                      style: const TextStyle(color: Colors.white, fontSize: 16),
                                       decoration: InputDecoration(
                                         hintText: 'Where to?',
                                         hintStyle: TextStyle(color: Colors.grey[500], fontSize: 16),
@@ -410,7 +431,7 @@ class _QuickRideRequestScreenState extends State<QuickRideRequestScreen> {
                                               FocusScope.of(context).unfocus();
                                               Future.delayed(const Duration(milliseconds: 100), () {
                                                 if (mounted) {
-                                                  _mapController.move(LatLng(result.latitude, result.longitude), 20);
+                                                  _mapController.move(LatLng(result.latitude, result.longitude), 25);
                                                 }
                                               });
                                             },

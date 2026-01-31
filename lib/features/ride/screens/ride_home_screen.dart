@@ -9,7 +9,7 @@ import '../../auth/providers/auth_provider.dart';
 import '../providers/ride_provider.dart';
 import '../models/ride_model.dart';
 import 'osm_live_tracking_screen.dart';
-import 'quick_ride_request_screen.dart';
+import 'ride_request_intermediate_screen.dart';
 
 class RideHomeScreen extends StatefulWidget {
   const RideHomeScreen({super.key});
@@ -159,9 +159,30 @@ class _RideHomeScreenState extends State<RideHomeScreen> {
                   : null,
             );
           }
-          developer.log('🗺️ NO active ride - Returning QuickRideRequestScreen', name: 'RideHomeScreen');
+          developer.log('🟢 NO active ride - Showing INTERMEDIATE "Where to?" screen', name: 'RideHomeScreen');
           developer.log('═══════════════════════════════════════\n', name: 'RideHomeScreen');
-          return const QuickRideRequestScreen();
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text('Campus Ride'),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.person),
+                  onPressed: () => context.push('/profile'),
+                ),
+              ],
+            ),
+            body: const RideRequestIntermediateScreen(),
+            floatingActionButton: profile.hasVehicle
+                ? FloatingActionButton.extended(
+                    onPressed: () {
+                      _toggleMode(true, profile.id, profileProvider);
+                    },
+                    icon: const Icon(Icons.motorcycle),
+                    label: const Text('Switch to Rider'),
+                    backgroundColor: AppColors.primary,
+                  )
+                : null,
+          );
         }
 
         developer.log('🏍️ RIDER MODE DETECTED - Showing rider view with AppBar', name: 'RideHomeScreen');

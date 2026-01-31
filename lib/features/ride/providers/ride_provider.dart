@@ -117,12 +117,21 @@ class RideProvider extends ChangeNotifier {
 
   Future<void> _findAndAssignRider(Ride ride, String collegeDomain) async {
     try {
+      print('\n🔍 Starting rider matching for ride: ${ride.id}');
+      print('Student: ${ride.studentName}');
+      print('Destination: ${ride.destination}');
+      print('College Domain: $collegeDomain');
+      print('Pickup Location: ${ride.pickupPoint.latitude}, ${ride.pickupPoint.longitude}');
+      
       final result = await _matchingService.matchRideWithTimeout(
         ride: ride,
         studentLocation: ride.pickupPoint,
       );
 
+      print('Matching result: Success=${result.success}, Message=${result.message}');
+      
       if (result.success && result.riderId != null) {
+        print('✅ Match found! Rider: ${result.riderName} (${result.riderId})');
         await _rideService.updateRideStatus(ride.id, RideStatus.accepted);
         _activeRide = ride.copyWith(
           status: RideStatus.accepted,
@@ -136,6 +145,7 @@ class RideProvider extends ChangeNotifier {
           rideId: ride.id,
         );
       } else {
+        print('❌ No match found: ${result.message}');
         await _rideService.updateRideStatus(ride.id, RideStatus.noMatch);
         _activeRide = ride.copyWith(status: RideStatus.noMatch);
         
@@ -146,7 +156,7 @@ class RideProvider extends ChangeNotifier {
       
       notifyListeners();
     } catch (e) {
-      debugPrint('Error in matching: $e');
+      print('❌ Error in matching: $e');
       await _rideService.updateRideStatus(ride.id, RideStatus.noMatch);
       _activeRide = ride.copyWith(status: RideStatus.noMatch);
       notifyListeners();

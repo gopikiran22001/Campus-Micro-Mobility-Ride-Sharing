@@ -181,6 +181,10 @@ class _RideHomeScreenState extends State<RideHomeScreen> {
                   icon: const Icon(Icons.person),
                   onPressed: () => context.push('/profile'),
                 ),
+                IconButton(
+                  icon: const Icon(Icons.bug_report),
+                  onPressed: () => context.push('/rider-debug'),
+                ),
               ],
             ),
             body: const RideRequestIntermediateScreen(),

@@ -22,31 +22,125 @@ class RideMatchingService {
     required String collegeDomain,
     required LocationPoint studentLocation,
   }) async {
-    final snapshot = await _firestore
-        .collection('users')
-        .where('collegeDomain', isEqualTo: collegeDomain)
-        .where('isRiderMode', isEqualTo: true)
-        .where('isAvailable', isEqualTo: true)
-        .get();
+    try {
+      print('\n🔍 SEARCHING FOR RIDERS:');
+      print('College Domain: $collegeDomain');
+      
+      // First, get all users in the college domain
+      final allUsersSnapshot = await _firestore
+          .collection('users')
+          .where('collegeDomain', isEqualTo: collegeDomain)
+          .get();
+      
+      print('Total users in domain: ${allUsersSnapshot.docs.length}');
+      
+      // Then filter for riders
+      final riderSnapshot = await _firestore
+          .collection('users')
+          .where('collegeDomain', isEqualTo: collegeDomain)
+          .where('isRiderMode', isEqualTo: true)
+          .get();
+      
+      print('Users in rider mode: ${riderSnapshot.docs.length}');
+      
+      // Finally filter for available riders
+      final availableSnapshot = await _firestore
+          .collection('users')
+          .where('collegeDomain', isEqualTo: collegeDomain)
+          .where('isRiderMode', isEqualTo: true)
+          .where('isAvailable', isEqualTo: true)
+          .get();
+      
+      print('Available riders: ${availableSnapshot.docs.length}');
 
-    final riders = snapshot.docs
-        .map((doc) => UserProfile.fromMap(doc.data()))
-        .where((rider) => 
-            rider.activeRoute != null &&
-            rider.vehicleType != VehicleType.none &&
-            (rider.vehicleType == VehicleType.bike || 
-             (rider.availableSeats != null && rider.availableSeats! > 0)))
-        .toList();
+      final riders = availableSnapshot.docs
+          .map((doc) {
+            try {
+              final data = doc.data();
+              print('Processing rider doc: ${doc.id}');
+              print('Data: $data');
+              return UserProfile.fromMap(data);
+            } catch (e) {
+              print('❌ Error parsing rider profile ${doc.id}: $e');
+              return null;
+            }
+          })
+          .where((rider) => rider != null)
+          .cast<UserProfile>()
+          .toList();
 
-    return riders;
+      print('\n📊 RIDER ANALYSIS:');
+      for (final rider in riders) {
+        print('Rider: ${rider.name}');
+        print('  - Vehicle: ${rider.vehicleType.name}');
+        print('  - Available: ${rider.isAvailable}');
+        print('  - Has Route: ${rider.activeRoute != null}');
+        print('  - Available Seats: ${rider.availableSeats}');
+        print('  - Has Vehicle: ${rider.hasVehicle}');
+      }
+
+      final eligibleRiders = riders.where((rider) {
+        // Check basic requirements
+        if (rider.vehicleType == VehicleType.none) {
+          print('❌ ${rider.name}: No vehicle type set');
+          return false;
+        }
+        
+        if (rider.activeRoute == null) {
+          print('❌ ${rider.name}: No active route');
+          return false;
+        }
+        
+        // For cars, check available seats
+        if (rider.vehicleType == VehicleType.car) {
+          if (rider.availableSeats == null || rider.availableSeats! <= 0) {
+            print('❌ ${rider.name}: No available seats (${rider.availableSeats})');
+            return false;
+          }
+        }
+        
+        print('✅ ${rider.name}: Eligible');
+        return true;
+      }).toList();
+      
+      print('\n✅ Found ${eligibleRiders.length} eligible riders');
+      return eligibleRiders;
+    } catch (e) {
+      print('❌ Error finding eligible riders: $e');
+      return [];
+    }
   }
 
   bool isStudentOnRiderRoute({
     required LocationPoint studentLocation,
     required RiderRoute riderRoute,
   }) {
+    // Check if encoded polyline exists and is valid
+    if (riderRoute.encodedPolyline.isEmpty) {
+      // Fallback: check distance from start point
+      final distanceFromStart = _calculateDistance(
+        studentLocation.latitude,
+        studentLocation.longitude,
+        riderRoute.startPoint.latitude,
+        riderRoute.startPoint.longitude,
+      );
+      return distanceFromStart <= maxRadiusMeters;
+    }
+    
     final polyline = _decodePolyline(riderRoute.encodedPolyline);
     
+    // If polyline decode failed, fallback to start point check
+    if (polyline.isEmpty) {
+      final distanceFromStart = _calculateDistance(
+        studentLocation.latitude,
+        studentLocation.longitude,
+        riderRoute.startPoint.latitude,
+        riderRoute.startPoint.longitude,
+      );
+      return distanceFromStart <= maxRadiusMeters;
+    }
+    
+    // Check proximity to any point on the route
     for (final routePoint in polyline) {
       final distance = _calculateDistance(
         studentLocation.latitude,
@@ -64,37 +158,51 @@ class RideMatchingService {
   }
 
   List<LatLng> _decodePolyline(String encoded) {
-    List<LatLng> points = [];
-    int index = 0;
-    int len = encoded.length;
-    int lat = 0;
-    int lng = 0;
-
-    while (index < len) {
-      int b;
-      int shift = 0;
-      int result = 0;
-      do {
-        b = encoded.codeUnitAt(index++) - 63;
-        result |= (b & 0x1f) << shift;
-        shift += 5;
-      } while (b >= 0x20);
-      int dlat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
-      lat += dlat;
-
-      shift = 0;
-      result = 0;
-      do {
-        b = encoded.codeUnitAt(index++) - 63;
-        result |= (b & 0x1f) << shift;
-        shift += 5;
-      } while (b >= 0x20);
-      int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
-      lng += dlng;
-
-      points.add(LatLng(lat / 1E5, lng / 1E5));
+    if (encoded.isEmpty) {
+      print('Warning: Empty polyline string provided');
+      return [];
     }
-    return points;
+    
+    try {
+      List<LatLng> points = [];
+      int index = 0;
+      int len = encoded.length;
+      int lat = 0;
+      int lng = 0;
+
+      while (index < len) {
+        int b;
+        int shift = 0;
+        int result = 0;
+        do {
+          if (index >= len) break;
+          b = encoded.codeUnitAt(index++) - 63;
+          result |= (b & 0x1f) << shift;
+          shift += 5;
+        } while (b >= 0x20 && index < len);
+        int dlat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+        lat += dlat;
+
+        shift = 0;
+        result = 0;
+        do {
+          if (index >= len) break;
+          b = encoded.codeUnitAt(index++) - 63;
+          result |= (b & 0x1f) << shift;
+          shift += 5;
+        } while (b >= 0x20 && index < len);
+        int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+        lng += dlng;
+
+        points.add(LatLng(lat / 1E5, lng / 1E5));
+      }
+      
+      print('Decoded ${points.length} points from polyline');
+      return points;
+    } catch (e) {
+      print('Error decoding polyline: $e');
+      return [];
+    }
   }
 
   double _calculateDistance(
@@ -228,23 +336,40 @@ class RideMatchingService {
     required LocationPoint studentLocation,
   }) async {
     final startTime = DateTime.now();
+    print('\n=== RIDE MATCHING STARTED ===');
+    print('Student: ${ride.studentName}');
+    print('College Domain: ${ride.collegeDomain}');
+    print('Student Location: ${studentLocation.latitude}, ${studentLocation.longitude}');
     
     final eligibleRiders = await findEligibleRiders(
       collegeDomain: ride.collegeDomain,
       studentLocation: studentLocation,
     );
 
+    print('Found ${eligibleRiders.length} eligible riders');
+    
+    if (eligibleRiders.isEmpty) {
+      return MatchingResult(
+        success: false,
+        message: 'No eligible riders found in your college domain',
+      );
+    }
+
     final routeCompatibleRiders = eligibleRiders.where((rider) {
-      return isStudentOnRiderRoute(
+      final isCompatible = isStudentOnRiderRoute(
         studentLocation: studentLocation,
         riderRoute: rider.activeRoute!,
       );
+      print('Rider ${rider.name}: Route compatible = $isCompatible');
+      return isCompatible;
     }).toList();
+
+    print('Found ${routeCompatibleRiders.length} route-compatible riders');
 
     if (routeCompatibleRiders.isEmpty) {
       return MatchingResult(
         success: false,
-        message: 'No riders found on compatible routes',
+        message: 'No riders found on compatible routes (within ${routeProximityThresholdMeters}m of your location)',
       );
     }
 
@@ -253,10 +378,12 @@ class RideMatchingService {
       studentLocation: studentLocation,
     );
 
+    print('Ranked ${rankedMatches.length} matches');
+
     if (rankedMatches.isEmpty) {
       return MatchingResult(
         success: false,
-        message: 'No riders within acceptable range',
+        message: 'No riders within acceptable range (${maxRadiusMeters}m)',
       );
     }
 
@@ -269,21 +396,25 @@ class RideMatchingService {
         );
       }
 
+      print('Trying to assign rider: ${match.rider.name}');
       final assigned = await assignRiderToRide(
         rideId: ride.id,
         riderId: match.rider.id,
       );
 
       if (!assigned) {
+        print('Failed to assign rider: ${match.rider.name}');
         continue;
       }
 
+      print('Waiting for rider response: ${match.rider.name}');
       final accepted = await _waitForRiderResponse(
         rideId: ride.id,
         riderId: match.rider.id,
       );
 
       if (accepted) {
+        print('Rider accepted: ${match.rider.name}');
         return MatchingResult(
           success: true,
           riderId: match.rider.id,
@@ -292,6 +423,7 @@ class RideMatchingService {
         );
       }
 
+      print('Rider declined or timed out: ${match.rider.name}');
       await releaseRider(match.rider.id);
     }
 

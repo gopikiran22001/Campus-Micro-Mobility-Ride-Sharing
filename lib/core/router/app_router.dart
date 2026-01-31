@@ -4,6 +4,8 @@ import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/signup_screen.dart';
 import '../../features/auth/screens/verify_email_screen.dart';
 import '../../features/ride/screens/ride_home_screen.dart';
+import '../../features/ride/screens/debug_matching_screen.dart';
+import '../../features/ride/screens/rider_status_debug_screen.dart';
 import '../../features/profile/screens/profile_setup_screen.dart';
 import '../../features/profile/screens/view_profile_screen.dart';
 import '../../features/profile/screens/edit_profile_screen.dart';
@@ -38,6 +40,14 @@ class AppRouter {
       GoRoute(
         path: '/edit-profile',
         builder: (context, state) => const EditProfileScreen(),
+      ),
+      GoRoute(
+        path: '/debug-matching',
+        builder: (context, state) => const DebugMatchingScreen(),
+      ),
+      GoRoute(
+        path: '/rider-debug',
+        builder: (context, state) => const RiderStatusDebugScreen(),
       ),
       GoRoute(path: '/', builder: (context, state) => const RideHomeScreen()),
     ],

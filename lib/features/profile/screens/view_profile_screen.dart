@@ -15,6 +15,10 @@ class ViewProfileScreen extends StatelessWidget {
         title: const Text('My Profile'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.bug_report),
+            onPressed: () => context.push('/debug-matching'),
+          ),
+          IconButton(
             icon: const Icon(Icons.edit),
             onPressed: () => context.push('/edit-profile'),
           ),

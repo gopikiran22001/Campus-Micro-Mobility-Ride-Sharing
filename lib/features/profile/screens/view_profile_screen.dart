@@ -134,13 +134,6 @@ class ViewProfileScreen extends StatelessWidget {
                   const SizedBox(height: 12),
                   _buildInfoCard(
                     context,
-                    icon: Icons.location_city,
-                    label: 'Zone',
-                    value: '${profile.zone} Campus',
-                  ),
-                  const SizedBox(height: 12),
-                  _buildInfoCard(
-                    context,
                     icon: profile.hasVehicle ? Icons.motorcycle : Icons.directions_walk,
                     label: 'Vehicle',
                     value: profile.hasVehicle

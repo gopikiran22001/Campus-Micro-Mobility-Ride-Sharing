@@ -1,20 +1,14 @@
-import '../../profile/models/user_profile.dart';
 import '../../../core/models/location_point.dart';
 
 enum RideStatus {
-  searching, // Looking for riders
-  requested, // Waiting for specific rider response
-  accepted, // Rider accepted
-  arrived, // Rider arrived (optional)
-  started, // Ride in progress
-  completed, // Done
-  cancelled, // Cancelled by either
-  no_match, // No riders found after timeout
-}
-
-enum RideTime {
-  now, // Immediate
-  soon, // Next 30 minutes
+  searching,
+  requested,
+  accepted,
+  arrived,
+  started,
+  completed,
+  cancelled,
+  noMatch,
 }
 
 class Ride {
@@ -25,13 +19,9 @@ class Ride {
   final String? riderName;
   final String origin;
   final String destination;
-  final LocationPoint? pickupPoint;
-  final LocationPoint? destinationPoint;
-  final String zone;
-  final VehicleType vehicleType;
-  final int requestedSeats;
+  final LocationPoint pickupPoint;
+  final LocationPoint destinationPoint;
   final RideStatus status;
-  final RideTime requestedTime;
   final DateTime createdAt;
   final DateTime? completedAt;
   final DateTime? matchingStartedAt;
@@ -48,13 +38,9 @@ class Ride {
     this.riderName,
     required this.origin,
     required this.destination,
-    this.pickupPoint,
-    this.destinationPoint,
-    required this.zone,
-    required this.vehicleType,
-    this.requestedSeats = 1,
+    required this.pickupPoint,
+    required this.destinationPoint,
     this.status = RideStatus.searching,
-    this.requestedTime = RideTime.now,
     required this.createdAt,
     this.completedAt,
     this.matchingStartedAt,
@@ -62,14 +48,7 @@ class Ride {
     this.cancellationReason,
     this.cancelledBy,
     this.declinedRiderIds = const [],
-  })  : assert(
-          vehicleType != VehicleType.bike || requestedSeats == 1,
-          'Bike rides must request exactly 1 seat',
-        ),
-        assert(
-          requestedSeats >= 1,
-          'Must request at least 1 seat',
-        );
+  });
 
   Map<String, dynamic> toMap() {
     return {
@@ -80,13 +59,9 @@ class Ride {
       'riderName': riderName,
       'origin': origin,
       'destination': destination,
-      'pickupPoint': pickupPoint?.toMap(),
-      'destinationPoint': destinationPoint?.toMap(),
-      'zone': zone,
-      'vehicleType': vehicleType.name,
-      'requestedSeats': requestedSeats,
+      'pickupPoint': pickupPoint.toMap(),
+      'destinationPoint': destinationPoint.toMap(),
       'status': status.name,
-      'requestedTime': requestedTime.name,
       'createdAt': createdAt.toIso8601String(),
       'completedAt': completedAt?.toIso8601String(),
       'matchingStartedAt': matchingStartedAt?.toIso8601String(),
@@ -106,25 +81,11 @@ class Ride {
       riderName: map['riderName'],
       origin: map['origin'] ?? '',
       destination: map['destination'] ?? '',
-      pickupPoint: map['pickupPoint'] != null
-          ? LocationPoint.fromMap(map['pickupPoint'])
-          : null,
-      destinationPoint: map['destinationPoint'] != null
-          ? LocationPoint.fromMap(map['destinationPoint'])
-          : null,
-      zone: map['zone'] ?? 'Central',
-      vehicleType: VehicleType.values.firstWhere(
-        (e) => e.name == map['vehicleType'],
-        orElse: () => VehicleType.bike,
-      ),
-      requestedSeats: map['requestedSeats'] ?? 1,
+      pickupPoint: LocationPoint.fromMap(map['pickupPoint']),
+      destinationPoint: LocationPoint.fromMap(map['destinationPoint']),
       status: RideStatus.values.firstWhere(
         (e) => e.name == map['status'],
         orElse: () => RideStatus.searching,
-      ),
-      requestedTime: RideTime.values.firstWhere(
-        (e) => e.name == map['requestedTime'],
-        orElse: () => RideTime.now,
       ),
       createdAt: DateTime.parse(map['createdAt']),
       completedAt: map['completedAt'] != null
@@ -163,11 +124,7 @@ class Ride {
       destination: destination,
       pickupPoint: pickupPoint,
       destinationPoint: destinationPoint,
-      zone: zone,
-      vehicleType: vehicleType,
-      requestedSeats: requestedSeats,
       status: status ?? this.status,
-      requestedTime: requestedTime,
       createdAt: createdAt,
       completedAt: completedAt ?? this.completedAt,
       matchingStartedAt: matchingStartedAt ?? this.matchingStartedAt,

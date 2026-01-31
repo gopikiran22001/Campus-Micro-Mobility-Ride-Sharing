@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'dart:developer' as developer;
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../profile/providers/profile_provider.dart';
-import '../../profile/models/user_profile.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/ride_provider.dart';
 import '../models/ride_model.dart';
 import 'osm_live_tracking_screen.dart';
-import 'map_ride_request_screen.dart';
-import 'osm_route_selection_screen.dart';
+import 'quick_ride_request_screen.dart';
 
 class RideHomeScreen extends StatefulWidget {
   const RideHomeScreen({super.key});
@@ -23,35 +22,72 @@ class _RideHomeScreenState extends State<RideHomeScreen> {
   @override
   void initState() {
     super.initState();
+    developer.log('═══════════════════════════════════════', name: 'RideHomeScreen');
+    developer.log('🏁 RideHomeScreen.initState() STARTED', name: 'RideHomeScreen');
+    developer.log('═══════════════════════════════════════', name: 'RideHomeScreen');
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      developer.log('⏰ PostFrameCallback triggered', name: 'RideHomeScreen');
       _ensureProfileLoaded();
     });
   }
 
   Future<void> _ensureProfileLoaded() async {
+    developer.log('\n', name: 'RideHomeScreen');
+    developer.log('═══════════════════════════════════════', name: 'RideHomeScreen');
+    developer.log('🔍 _ensureProfileLoaded() STARTED', name: 'RideHomeScreen');
+    developer.log('═══════════════════════════════════════', name: 'RideHomeScreen');
     final profileProvider = context.read<ProfileProvider>();
     final authProvider = context.read<AuthProvider>();
     final rideProvider = context.read<RideProvider>();
 
+    developer.log('🔑 Auth User: ${authProvider.user?.uid ?? "NULL"}', name: 'RideHomeScreen');
+    developer.log('🔑 Auth Email: ${authProvider.user?.email ?? "NULL"}', name: 'RideHomeScreen');
+    developer.log('👤 Profile Provider - isLoading: ${profileProvider.isLoading}', name: 'RideHomeScreen');
+    developer.log('👤 Profile Provider - profile: ${profileProvider.profile?.name ?? "NULL"}', name: 'RideHomeScreen');
+
     if (authProvider.user != null) {
+      developer.log('✅ User authenticated: ${authProvider.user!.uid}', name: 'RideHomeScreen');
       if (profileProvider.profile == null) {
+        developer.log('💾 Profile is NULL - Loading from Firestore...', name: 'RideHomeScreen');
         await profileProvider.loadProfile(authProvider.user!.uid);
+        developer.log('💾 Profile load completed', name: 'RideHomeScreen');
+        developer.log('👤 Profile after load: ${profileProvider.profile?.name ?? "STILL NULL"}', name: 'RideHomeScreen');
+      } else {
+        developer.log('✅ Profile already loaded: ${profileProvider.profile!.name}', name: 'RideHomeScreen');
       }
 
       if (mounted) {
+        developer.log('✅ Widget is still mounted', name: 'RideHomeScreen');
         final profile = profileProvider.profile;
         if (profile == null) {
+          developer.log('⚠️ Profile is STILL NULL after load - Redirecting to /profile-setup', name: 'RideHomeScreen');
           context.go('/profile-setup');
         } else {
+          developer.log('✅ Profile loaded successfully:', name: 'RideHomeScreen');
+          developer.log('   - Name: ${profile.name}', name: 'RideHomeScreen');
+          developer.log('   - Email: ${profile.email}', name: 'RideHomeScreen');
+          developer.log('   - isRiderMode: ${profile.isRiderMode}', name: 'RideHomeScreen');
+          developer.log('   - hasVehicle: ${profile.hasVehicle}', name: 'RideHomeScreen');
+          developer.log('   - isAvailable: ${profile.isAvailable}', name: 'RideHomeScreen');
+          
           // Start Listeners based on mode
           if (profile.isRiderMode) {
+            developer.log('🏍️ User is in RIDER mode - Starting rider listeners', name: 'RideHomeScreen');
             rideProvider.startListeningToIncomingRequests(profile.id);
           } else {
+            developer.log('🚶 User is in STUDENT mode - Starting student listeners', name: 'RideHomeScreen');
             rideProvider.startListeningToActiveRide(profile.id);
           }
         }
+      } else {
+        developer.log('❌ Widget is NOT mounted', name: 'RideHomeScreen');
       }
+    } else {
+      developer.log('❌ No authenticated user found', name: 'RideHomeScreen');
     }
+    developer.log('═══════════════════════════════════════', name: 'RideHomeScreen');
+    developer.log('🏁 _ensureProfileLoaded() COMPLETED', name: 'RideHomeScreen');
+    developer.log('═══════════════════════════════════════\n', name: 'RideHomeScreen');
   }
 
   Future<void> _toggleMode(
@@ -71,16 +107,65 @@ class _RideHomeScreenState extends State<RideHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    developer.log('\n', name: 'RideHomeScreen');
+    developer.log('═══════════════════════════════════════', name: 'RideHomeScreen');
+    developer.log('🏠 RideHomeScreen.build() CALLED', name: 'RideHomeScreen');
+    developer.log('═══════════════════════════════════════', name: 'RideHomeScreen');
     return Consumer<ProfileProvider>(
       builder: (context, profileProvider, _) {
         final profile = profileProvider.profile;
+        developer.log('👤 Consumer builder triggered', name: 'RideHomeScreen');
+        developer.log('   - Profile: ${profile?.name ?? "NULL"}', name: 'RideHomeScreen');
+        developer.log('   - isRiderMode: ${profile?.isRiderMode ?? "NULL"}', name: 'RideHomeScreen');
+        developer.log('   - hasVehicle: ${profile?.hasVehicle ?? "NULL"}', name: 'RideHomeScreen');
+        developer.log('   - isLoading: ${profileProvider.isLoading}', name: 'RideHomeScreen');
 
         if (profileProvider.isLoading || profile == null) {
+          developer.log('⏳ Profile is loading or NULL - Showing CircularProgressIndicator', name: 'RideHomeScreen');
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
 
+        if (!profile.isRiderMode) {
+          developer.log('🚶 STUDENT MODE DETECTED', name: 'RideHomeScreen');
+          final activeRide = context.watch<RideProvider>().activeRide;
+          developer.log('🚗 Active ride check: ${activeRide?.id ?? "NONE"}', name: 'RideHomeScreen');
+          developer.log('   - Status: ${activeRide?.status ?? "N/A"}', name: 'RideHomeScreen');
+          developer.log('   - Destination: ${activeRide?.destination ?? "N/A"}', name: 'RideHomeScreen');
+          
+          if (activeRide != null) {
+            developer.log('📊 Active ride EXISTS - Showing active ride view with AppBar', name: 'RideHomeScreen');
+            return Scaffold(
+              appBar: AppBar(
+                title: const Text('Campus Ride'),
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.person),
+                    onPressed: () => context.push('/profile'),
+                  ),
+                ],
+              ),
+              body: _buildActiveRideView(context),
+              floatingActionButton: profile.hasVehicle
+                  ? FloatingActionButton.extended(
+                      onPressed: () {
+                        _toggleMode(true, profile.id, profileProvider);
+                      },
+                      icon: const Icon(Icons.motorcycle),
+                      label: const Text('Switch to Rider'),
+                      backgroundColor: AppColors.primary,
+                    )
+                  : null,
+            );
+          }
+          developer.log('🗺️ NO active ride - Returning QuickRideRequestScreen', name: 'RideHomeScreen');
+          developer.log('═══════════════════════════════════════\n', name: 'RideHomeScreen');
+          return const QuickRideRequestScreen();
+        }
+
+        developer.log('🏍️ RIDER MODE DETECTED - Showing rider view with AppBar', name: 'RideHomeScreen');
+        developer.log('═══════════════════════════════════════\n', name: 'RideHomeScreen');
         return Scaffold(
           appBar: AppBar(
             title: Text(
@@ -93,302 +178,17 @@ class _RideHomeScreenState extends State<RideHomeScreen> {
               ),
             ],
           ),
-          body: profile.isRiderMode
-              ? _buildRiderView(context, profileProvider)
-              : _buildStudentView(context, profileProvider),
-
-          floatingActionButton: profile.hasVehicle
-              ? FloatingActionButton.extended(
-                  onPressed: () {
-                    _toggleMode(
-                      !profile.isRiderMode,
-                      profile.id,
-                      profileProvider,
-                    );
-                  },
-                  icon: Icon(
-                    profile.isRiderMode
-                        ? Icons.directions_walk
-                        : Icons.motorcycle,
-                  ),
-                  label: Text(
-                    profile.isRiderMode
-                        ? 'Switch to Passenger'
-                        : 'Switch to Rider',
-                  ),
-                  backgroundColor: profile.isRiderMode
-                      ? AppColors.secondary
-                      : AppColors.primary,
-                )
-              : null,
+          body: _buildRiderView(context, profileProvider),
+          floatingActionButton: FloatingActionButton.extended(
+            onPressed: () {
+              _toggleMode(false, profile.id, profileProvider);
+            },
+            icon: const Icon(Icons.directions_walk),
+            label: const Text('Switch to Passenger'),
+            backgroundColor: AppColors.secondary,
+          ),
         );
       },
-    );
-  }
-
-  Widget _buildStudentView(
-    BuildContext context,
-    ProfileProvider profileProvider,
-  ) {
-    if (context.watch<RideProvider>().activeRide != null) {
-      return _buildActiveRideView(context);
-    }
-
-    final destinationController = TextEditingController();
-    String selectedZone = 'Central';
-    RideTime selectedTime = RideTime.now;
-    VehicleType selectedVehicleType = VehicleType.bike;
-    int requestedSeats = 1;
-
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            AppColors.background,
-            AppColors.surface,
-          ],
-        ),
-      ),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: StatefulBuilder(
-          builder: (context, setState) {
-            return Column(
-              children: [
-                const SizedBox(height: 40),
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.location_on,
-                    size: 80,
-                    color: AppColors.primary,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  AppStrings.requestRide,
-                  style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Find a ride to your destination',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 40),
-                Card(
-                  elevation: 4,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(20.0),
-                    child: Column(
-                      children: [
-                        DropdownButtonFormField<String>(
-                          value: selectedZone,
-                          decoration: InputDecoration(
-                            labelText: 'Pickup Zone',
-                            prefixIcon: const Icon(
-                              Icons.location_city,
-                              color: AppColors.primary,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            filled: true,
-                            fillColor: AppColors.background,
-                          ),
-                          items: const [
-                            DropdownMenuItem(
-                              value: 'Central',
-                              child: Text('Central Campus'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'North',
-                              child: Text('North Campus'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'South',
-                              child: Text('South Campus'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'East',
-                              child: Text('East Campus'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'West',
-                              child: Text('West Campus'),
-                            ),
-                          ],
-                          onChanged: (value) {
-                            if (value != null) {
-                              setState(() => selectedZone = value);
-                            }
-                          },
-                        ),
-                        const SizedBox(height: 20),
-                        DropdownButtonFormField<RideTime>(
-                          value: selectedTime,
-                          decoration: InputDecoration(
-                            labelText: 'When do you need a ride?',
-                            prefixIcon: const Icon(
-                              Icons.access_time,
-                              color: AppColors.primary,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            filled: true,
-                            fillColor: AppColors.background,
-                          ),
-                          items: const [
-                            DropdownMenuItem(
-                              value: RideTime.now,
-                              child: Text('Now (Immediate)'),
-                            ),
-                            DropdownMenuItem(
-                              value: RideTime.soon,
-                              child: Text('Next 30 minutes'),
-                            ),
-                          ],
-                          onChanged: (value) {
-                            if (value != null) {
-                              setState(() => selectedTime = value);
-                            }
-                          },
-                        ),
-                        const SizedBox(height: 20),
-                        DropdownButtonFormField<VehicleType>(
-                          value: selectedVehicleType,
-                          decoration: InputDecoration(
-                            labelText: 'Vehicle Type',
-                            prefixIcon: const Icon(
-                              Icons.directions_car,
-                              color: AppColors.primary,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            filled: true,
-                            fillColor: AppColors.background,
-                          ),
-                          items: const [
-                            DropdownMenuItem(
-                              value: VehicleType.bike,
-                              child: Text('Bike (1 seat)'),
-                            ),
-                            DropdownMenuItem(
-                              value: VehicleType.car,
-                              child: Text('Car (multi-seat)'),
-                            ),
-                          ],
-                          onChanged: (value) {
-                            if (value != null) {
-                              setState(() {
-                                selectedVehicleType = value;
-                                if (value == VehicleType.bike) {
-                                  requestedSeats = 1;
-                                }
-                              });
-                            }
-                          },
-                        ),
-                        if (selectedVehicleType == VehicleType.car) ...[
-                          const SizedBox(height: 20),
-                          DropdownButtonFormField<int>(
-                            value: requestedSeats,
-                            decoration: InputDecoration(
-                              labelText: 'Number of Seats',
-                              prefixIcon: const Icon(
-                                Icons.event_seat,
-                                color: AppColors.primary,
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              filled: true,
-                              fillColor: AppColors.background,
-                            ),
-                            items: const [
-                              DropdownMenuItem(value: 1, child: Text('1 seat')),
-                              DropdownMenuItem(value: 2, child: Text('2 seats')),
-                              DropdownMenuItem(value: 3, child: Text('3 seats')),
-                              DropdownMenuItem(value: 4, child: Text('4 seats')),
-                            ],
-                            onChanged: (value) {
-                              if (value != null) {
-                                setState(() => requestedSeats = value);
-                              }
-                            },
-                          ),
-                        ],
-                        const SizedBox(height: 20),
-                        TextField(
-                          controller: destinationController,
-                          decoration: InputDecoration(
-                            hintText: 'Enter Destination',
-                            prefixIcon: const Icon(
-                              Icons.search,
-                              color: AppColors.primary,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            filled: true,
-                            fillColor: AppColors.background,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 32),
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const MapRideRequestScreen(),
-                        ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 4,
-                    ),
-                    icon: const Icon(Icons.map, size: 24),
-                    label: const Text(
-                      'Request Ride with Map',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-              ],
-            );
-          },
-        ),
-      ),
     );
   }
 
@@ -441,7 +241,7 @@ class _RideHomeScreenState extends State<RideHomeScreen> {
           statusIcon = Icons.check_circle;
           statusColor = AppColors.success;
           break;
-        case RideStatus.no_match:
+        case RideStatus.noMatch:
           statusMsg = 'No riders available';
           statusIcon = Icons.error_outline;
           statusColor = AppColors.error;
@@ -545,14 +345,8 @@ class _RideHomeScreenState extends State<RideHomeScreen> {
                     label: 'Destination',
                     value: ride.destination,
                   ),
-                  const SizedBox(height: 12),
-                  _buildInfoCard(
-                    icon: Icons.location_city,
-                    label: 'Zone',
-                    value: '${ride.zone} Campus',
-                  ),
                   const SizedBox(height: 32),
-                  if (!isRider && ride.status == RideStatus.no_match) ...[
+                  if (!isRider && ride.status == RideStatus.noMatch) ...[
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -562,26 +356,13 @@ class _RideHomeScreenState extends State<RideHomeScreen> {
                           color: AppColors.error.withValues(alpha: 0.3),
                         ),
                       ),
-                      child: Column(
-                        children: [
-                          const Text(
-                            'We couldn\'t find any available riders in your zone at this time.',
-                            style: TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 14,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'Try again in a few minutes or select a different zone.',
-                            style: TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 12,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
+                      child: const Text(
+                        'No riders available at this time. Please try again in a few minutes.',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 14,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -837,7 +618,7 @@ class _RideHomeScreenState extends State<RideHomeScreen> {
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      '${req.zone} Campus',
+                                      req.destination,
                                       style: const TextStyle(
                                         color: AppColors.textSecondary,
                                         fontSize: 14,
@@ -1030,104 +811,6 @@ class _RideHomeScreenState extends State<RideHomeScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            if (isAvailable)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 48),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () async {
-                      final route = await Navigator.push<RiderRoute>(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const RouteSelectionScreen(),
-                        ),
-                      );
-                      if (route != null && mounted) {
-                        await context
-                            .read<RideProvider>()
-                            .setRiderRoute(provider.profile!.id, route);
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Route set successfully'),
-                            ),
-                          );
-                        }
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    icon: const Icon(Icons.route),
-                    label: Text(
-                      provider.profile?.activeRoute != null
-                          ? 'Update Route'
-                          : 'Set Route',
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                  ),
-                ),
-              ),
-            if (isAvailable && provider.profile?.activeRoute != null)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 48),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: AppColors.success.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.check_circle,
-                            color: AppColors.success,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Route: ${provider.profile!.activeRoute!.startPoint.displayName} → ${provider.profile!.activeRoute!.endPoint.displayName}',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextButton.icon(
-                      onPressed: () async {
-                        await context
-                            .read<RideProvider>()
-                            .clearRiderRoute(provider.profile!.id);
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Route cleared'),
-                            ),
-                          );
-                        }
-                      },
-                      icon: const Icon(Icons.clear, size: 16),
-                      label: const Text('Clear Route'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: AppColors.error,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
           ],
         ),
       ),

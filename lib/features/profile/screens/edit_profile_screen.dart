@@ -20,7 +20,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late bool _hasVehicle;
   late VehicleType _vehicleType;
   late int _carSeats;
-  late String _zone;
   bool _isLoading = false;
 
   @override
@@ -33,7 +32,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _hasVehicle = profile.hasVehicle;
     _vehicleType = profile.vehicleType;
     _carSeats = profile.carSeats ?? 4;
-    _zone = profile.zone;
   }
 
   @override
@@ -60,7 +58,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       vehicleType: _hasVehicle ? _vehicleType : VehicleType.none,
       carSeats: _hasVehicle && _vehicleType == VehicleType.car ? _carSeats : null,
       availableSeats: _hasVehicle && _vehicleType == VehicleType.car ? _carSeats : null,
-      zone: _zone,
     );
 
     try {
@@ -233,31 +230,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       (v == null || v.trim().isEmpty) ? 'Year is required' : null,
                 ),
                 const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  value: _zone,
-                  decoration: InputDecoration(
-                    labelText: 'Campus Zone',
-                    prefixIcon: const Icon(Icons.location_city, color: AppColors.primary),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    filled: true,
-                    fillColor: AppColors.surface,
-                  ),
-                  items: const [
-                    DropdownMenuItem(value: 'Central', child: Text('Central Campus')),
-                    DropdownMenuItem(value: 'North', child: Text('North Campus')),
-                    DropdownMenuItem(value: 'South', child: Text('South Campus')),
-                    DropdownMenuItem(value: 'East', child: Text('East Campus')),
-                    DropdownMenuItem(value: 'West', child: Text('West Campus')),
-                  ],
-                  onChanged: (value) {
-                    if (value != null) {
-                      setState(() => _zone = value);
-                    }
-                  },
-                ),
-                const SizedBox(height: 24),
                 Card(
                   elevation: 2,
                   shape: RoundedRectangleBorder(

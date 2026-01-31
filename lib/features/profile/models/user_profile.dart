@@ -56,7 +56,6 @@ class UserProfile {
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? lastRideCompletedAt;
-  final String zone;
   final String? fcmToken;
   final RiderRoute? activeRoute;
 
@@ -78,7 +77,6 @@ class UserProfile {
     this.isAvailable = false,
     this.reputationScore = 100,
     this.lastRideCompletedAt,
-    this.zone = 'Central',
     this.fcmToken,
     this.activeRoute,
   })  : assert(
@@ -116,7 +114,6 @@ class UserProfile {
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'lastRideCompletedAt': lastRideCompletedAt?.toIso8601String(),
-      'zone': zone,
       'fcmToken': fcmToken,
       'activeRoute': activeRoute?.toMap(),
     };
@@ -151,7 +148,6 @@ class UserProfile {
       lastRideCompletedAt: map['lastRideCompletedAt'] != null
           ? DateTime.parse(map['lastRideCompletedAt'])
           : null,
-      zone: map['zone'] ?? 'Central',
       fcmToken: map['fcmToken'],
       activeRoute: map['activeRoute'] != null
           ? RiderRoute.fromMap(map['activeRoute'])
@@ -175,7 +171,6 @@ class UserProfile {
     DateTime? createdAt,
     DateTime? updatedAt,
     DateTime? lastRideCompletedAt,
-    String? zone,
     String? fcmToken,
     RiderRoute? activeRoute,
   }) {
@@ -197,7 +192,6 @@ class UserProfile {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? DateTime.now(),
       lastRideCompletedAt: lastRideCompletedAt ?? this.lastRideCompletedAt,
-      zone: zone ?? this.zone,
       fcmToken: fcmToken ?? this.fcmToken,
       activeRoute: activeRoute ?? this.activeRoute,
     );

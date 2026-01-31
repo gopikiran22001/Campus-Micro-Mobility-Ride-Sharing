@@ -109,7 +109,7 @@ class _OsmLiveTrackingScreenState extends State<OsmLiveTrackingScreen> {
                       polylines: [
                         Polyline(
                           points: trackingProvider.routePolyline,
-                          color: AppColors.primary.withOpacity(0.7),
+                          color: AppColors.primary.withValues(alpha: 0.7),
                           strokeWidth: 6,
                           borderColor: Colors.white,
                           borderStrokeWidth: 2,
@@ -225,9 +225,9 @@ class _OsmLiveTrackingScreenState extends State<OsmLiveTrackingScreen> {
                                     ),
                                   ),
                                   const SizedBox(height: 4),
-                                  Text(
-                                    '${ride.vehicleType.name.toUpperCase()} • ${ride.zone} Campus',
-                                    style: const TextStyle(
+                                  const Text(
+                                    'Rider',
+                                    style: TextStyle(
                                       color: AppColors.textSecondary,
                                       fontSize: 14,
                                     ),

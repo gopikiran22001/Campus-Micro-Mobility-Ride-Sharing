@@ -36,6 +36,34 @@ class OsmMapService {
     }
   }
 
+  Future<LocationPoint> reverseGeocode(double latitude, double longitude) async {
+    try {
+      final url = Uri.parse(
+        '$_nominatimBaseUrl/reverse?lat=$latitude&lon=$longitude&format=json',
+      );
+      final response = await http.get(
+        url,
+        headers: {'User-Agent': 'CampusGo-RideSharing/1.0'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return LocationPoint(
+          latitude: latitude,
+          longitude: longitude,
+          displayName: data['display_name'] ?? 'Unknown Location',
+        );
+      }
+      throw Exception('Reverse geocoding failed');
+    } catch (e) {
+      return LocationPoint(
+        latitude: latitude,
+        longitude: longitude,
+        displayName: 'Lat: ${latitude.toStringAsFixed(4)}, Lon: ${longitude.toStringAsFixed(4)}',
+      );
+    }
+  }
+
   Future<Map<String, dynamic>?> getRoute(
     LocationPoint start,
     LocationPoint end,

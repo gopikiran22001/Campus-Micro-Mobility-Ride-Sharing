@@ -90,34 +90,19 @@ class ProfileService {
     });
   }
 
-  // For ride matching: Find available riders nearby (simplified query for MVP)
-  // In real app, use GeoFlutterFire. Here we just query available riders
-  // We will assume "campus" is small enough or we filter by college domain in query.
   Future<List<UserProfile>> getAvailableRiders(
-    String collegeDomain, {
-    VehicleType? vehicleType,
-    int? requiredSeats,
-  }) async {
-    Query query = _firestore
+    String collegeDomain,
+  ) async {
+    final query = _firestore
         .collection(_collection)
         .where('isRiderMode', isEqualTo: true)
         .where('isAvailable', isEqualTo: true)
         .where('collegeDomain', isEqualTo: collegeDomain);
 
-    if (vehicleType != null) {
-      query = query.where('vehicleType', isEqualTo: vehicleType.name);
-    }
-
     final snapshot = await query.get();
     final riders = snapshot.docs
-        .map((doc) => UserProfile.fromMap(doc.data() as Map<String, dynamic>))
+        .map((doc) => UserProfile.fromMap(doc.data()))
         .toList();
-
-    if (requiredSeats != null && requiredSeats > 1) {
-      riders.removeWhere((rider) =>
-          rider.vehicleType != VehicleType.car ||
-          (rider.availableSeats ?? 0) < requiredSeats);
-    }
 
     riders.sort((a, b) {
       if (a.lastRideCompletedAt == null) return -1;

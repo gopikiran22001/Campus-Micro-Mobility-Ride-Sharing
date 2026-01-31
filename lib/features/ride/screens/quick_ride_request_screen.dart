@@ -235,6 +235,7 @@ class _QuickRideRequestScreenState extends State<QuickRideRequestScreen> {
             pickupPoint: _currentPickupLocation!,
             destinationPoint: _destinationLocation!,
           );
+      Navigator.pop(context);
     }
   }
 

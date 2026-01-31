@@ -10,6 +10,7 @@ import '../providers/ride_provider.dart';
 import '../models/ride_model.dart';
 import 'osm_live_tracking_screen.dart';
 import 'ride_request_intermediate_screen.dart';
+import 'rider_route_setup_screen.dart';
 
 class RideHomeScreen extends StatefulWidget {
   const RideHomeScreen({super.key});
@@ -95,6 +96,17 @@ class _RideHomeScreenState extends State<RideHomeScreen> {
     String userId,
     ProfileProvider pProvider,
   ) async {
+    if (isRider && !pProvider.profile!.isAvailable) {
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const RiderRouteSetupScreen(),
+        ),
+      );
+      if (result == null && mounted) {
+        return;
+      }
+    }
     await pProvider.toggleRiderMode(isRider);
     if (!mounted) return;
     final rProvider = context.read<RideProvider>();

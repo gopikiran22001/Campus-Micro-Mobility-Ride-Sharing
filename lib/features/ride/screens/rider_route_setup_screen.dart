@@ -2,36 +2,35 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
-import 'dart:developer' as developer;
 import '../../../core/models/location_point.dart';
 import '../../../core/services/osm_map_service.dart';
 import '../../../core/services/real_location_service.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../profile/providers/profile_provider.dart';
-import '../../auth/providers/auth_provider.dart';
-import '../providers/ride_provider.dart';
+import '../../profile/models/user_profile.dart';
 
-class QuickRideRequestScreen extends StatefulWidget {
-  const QuickRideRequestScreen({super.key});
+class RiderRouteSetupScreen extends StatefulWidget {
+  const RiderRouteSetupScreen({super.key});
 
   @override
-  State<QuickRideRequestScreen> createState() => _QuickRideRequestScreenState();
+  State<RiderRouteSetupScreen> createState() => _RiderRouteSetupScreenState();
 }
 
-class _QuickRideRequestScreenState extends State<QuickRideRequestScreen> {
+class _RiderRouteSetupScreenState extends State<RiderRouteSetupScreen> {
   final MapController _mapController = MapController();
   final _searchController = TextEditingController();
   final _searchFocusNode = FocusNode();
   final _mapService = OsmMapService();
   final _locationService = RealLocationService();
   
-  LocationPoint? _currentPickupLocation;
+  LocationPoint? _currentLocation;
   LocationPoint? _destinationLocation;
   List<LocationPoint> _searchResults = [];
   bool _isSearching = false;
   bool _isLoadingLocation = true;
   String? _locationError;
   bool _showSearchResults = false;
+  int _availableSeats = 1;
   List<LatLng> _routePolyline = [];
   
   final List<Marker> _markers = [];
@@ -40,39 +39,34 @@ class _QuickRideRequestScreenState extends State<QuickRideRequestScreen> {
   @override
   void initState() {
     super.initState();
-    developer.log('\n🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴', name: 'QuickRideRequestScreen');
-    developer.log('🔴 MAP SCREEN initState() CALLED', name: 'QuickRideRequestScreen');
-    developer.log('🔴 This is the MAP screen with location tracking', name: 'QuickRideRequestScreen');
-    developer.log('🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴', name: 'QuickRideRequestScreen');
     _searchFocusNode.addListener(() {
       setState(() {
         _showSearchResults = _searchFocusNode.hasFocus && _searchResults.isNotEmpty;
       });
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      developer.log('\n🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠', name: 'QuickRideRequestScreen');
-      developer.log('🟠 PostFrameCallback - NOW STARTING LOCATION TRACKING', name: 'QuickRideRequestScreen');
-      developer.log('🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠', name: 'QuickRideRequestScreen');
-      _initializePickupLocation();
+      _initializeCurrentLocation();
+      _initializeSeats();
     });
-    developer.log('🔴 MAP SCREEN initState() COMPLETED (location will start in PostFrameCallback)', name: 'QuickRideRequestScreen');
-    developer.log('🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴\n', name: 'QuickRideRequestScreen');
   }
 
-  Future<void> _initializePickupLocation() async {
-    developer.log('\n🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡', name: 'LocationTracking');
-    developer.log('🟡 _initializePickupLocation() STARTED', name: 'LocationTracking');
-    developer.log('🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡', name: 'LocationTracking');
+  void _initializeSeats() {
+    final profile = context.read<ProfileProvider>().profile;
+    if (profile != null && profile.vehicleType == VehicleType.car) {
+      setState(() {
+        _availableSeats = profile.carSeats ?? 1;
+      });
+    }
+  }
+
+  Future<void> _initializeCurrentLocation() async {
     setState(() {
       _isLoadingLocation = true;
       _locationError = null;
     });
 
-    developer.log('📍 Checking location permissions...', name: 'LocationTracking');
     final hasPermission = await _locationService.checkPermissions();
-    developer.log('📍 Permission result: $hasPermission', name: 'LocationTracking');
     if (!hasPermission) {
-      developer.log('❌ Location permission DENIED', name: 'LocationTracking');
       setState(() {
         _isLoadingLocation = false;
         _locationError = 'Location permission denied';
@@ -80,11 +74,8 @@ class _QuickRideRequestScreenState extends State<QuickRideRequestScreen> {
       return;
     }
 
-    developer.log('📍 Getting current location...', name: 'LocationTracking');
     final location = await _locationService.getCurrentLocation();
-    developer.log('📍 Location result: ${location?.latitude}, ${location?.longitude}', name: 'LocationTracking');
     if (location == null) {
-      developer.log('❌ Unable to get location', name: 'LocationTracking');
       setState(() {
         _isLoadingLocation = false;
         _locationError = 'Unable to get location';
@@ -93,23 +84,19 @@ class _QuickRideRequestScreenState extends State<QuickRideRequestScreen> {
     }
 
     try {
-      developer.log('🗺️ Reverse geocoding location...', name: 'LocationTracking');
-      final pickupPoint = await _mapService.reverseGeocode(
+      final currentPoint = await _mapService.reverseGeocode(
         location.latitude,
         location.longitude,
       );
-      developer.log('🗺️ Reverse geocode result: ${pickupPoint.displayName}', name: 'LocationTracking');
       
       if (mounted) {
         setState(() {
-          _currentPickupLocation = pickupPoint;
+          _currentLocation = currentPoint;
           _isLoadingLocation = false;
         });
-        _addPickupMarker(pickupPoint);
-        developer.log('✅ Location tracking completed successfully', name: 'LocationTracking');
+        _addStartMarker(currentPoint);
       }
     } catch (e) {
-      developer.log('❌ Reverse geocode failed: $e', name: 'LocationTracking');
       if (mounted) {
         setState(() {
           _isLoadingLocation = false;
@@ -117,16 +104,14 @@ class _QuickRideRequestScreenState extends State<QuickRideRequestScreen> {
         });
       }
     }
-    developer.log('🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡', name: 'LocationTracking');
-    developer.log('🟡 _initializePickupLocation() COMPLETED\n', name: 'LocationTracking');
   }
 
-  void _addPickupMarker(LocationPoint location) {
+  void _addStartMarker(LocationPoint location) {
     setState(() {
-      _markers.removeWhere((m) => m.key == const Key('pickup'));
+      _markers.removeWhere((m) => m.key == const Key('start'));
       _markers.add(
         Marker(
-          key: const Key('pickup'),
+          key: const Key('start'),
           point: LatLng(location.latitude, location.longitude),
           width: 50,
           height: 50,
@@ -219,24 +204,50 @@ class _QuickRideRequestScreenState extends State<QuickRideRequestScreen> {
     }
   }
 
-  void _requestRide() {
-    if (_currentPickupLocation == null || _destinationLocation == null) {
+  Future<void> _startRiding() async {
+    if (_currentLocation == null || _destinationLocation == null) {
       return;
     }
 
-    final user = context.read<AuthProvider>().user;
     final profile = context.read<ProfileProvider>().profile;
+    if (profile == null) return;
 
-    if (user != null && profile != null) {
-      context.read<RideProvider>().requestRide(
-            studentId: user.uid,
-            studentName: profile.name,
-            destination: _destinationLocation!.displayName,
-            collegeDomain: profile.collegeDomain,
-            pickupPoint: _currentPickupLocation!,
-            destinationPoint: _destinationLocation!,
-          );
-      Navigator.pop(context);
+    try {
+      final route = await _mapService.getRoute(
+        _currentLocation!,
+        _destinationLocation!,
+      );
+
+      if (route == null) {
+        throw Exception('Failed to get route');
+      }
+
+      final riderRoute = RiderRoute(
+        startPoint: _currentLocation!,
+        endPoint: _destinationLocation!,
+        encodedPolyline: route['encodedPolyline'] ?? '',
+        distanceMeters: route['distance'] ?? 0,
+        durationSeconds: route['duration'] ?? 0,
+      );
+
+      if (!mounted) return;
+      await context.read<ProfileProvider>().updateProfile(
+        profile.copyWith(
+          isAvailable: true,
+          availableSeats: profile.vehicleType == VehicleType.car ? _availableSeats : null,
+          activeRoute: riderRoute,
+        ),
+      );
+
+      if (mounted) {
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to set route: $e')),
+        );
+      }
     }
   }
 
@@ -250,7 +261,8 @@ class _QuickRideRequestScreenState extends State<QuickRideRequestScreen> {
 
   @override
   Widget build(BuildContext context) {
-    developer.log('🔴 MAP SCREEN build() called', name: 'QuickRideRequestScreen');
+    final profile = context.watch<ProfileProvider>().profile;
+    final isCar = profile?.vehicleType == VehicleType.car;
     
     return Scaffold(
       resizeToAvoidBottomInset: false,
@@ -259,7 +271,7 @@ class _QuickRideRequestScreenState extends State<QuickRideRequestScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('Select Destination'),
+        title: const Text('Set Your Route'),
       ),
       body: _isLoadingLocation
           ? const Center(child: CircularProgressIndicator())
@@ -273,7 +285,7 @@ class _QuickRideRequestScreenState extends State<QuickRideRequestScreen> {
                       Text(_locationError!),
                       const SizedBox(height: 24),
                       ElevatedButton(
-                        onPressed: _initializePickupLocation,
+                        onPressed: _initializeCurrentLocation,
                         child: const Text('Retry'),
                       ),
                     ],
@@ -289,8 +301,8 @@ class _QuickRideRequestScreenState extends State<QuickRideRequestScreen> {
                       FlutterMap(
                         mapController: _mapController,
                         options: MapOptions(
-                          initialCenter: _currentPickupLocation != null
-                              ? LatLng(_currentPickupLocation!.latitude, _currentPickupLocation!.longitude)
+                          initialCenter: _currentLocation != null
+                              ? LatLng(_currentLocation!.latitude, _currentLocation!.longitude)
                               : _defaultCenter,
                           initialZoom: 17,
                           onTap: (_, __) {
@@ -303,11 +315,11 @@ class _QuickRideRequestScreenState extends State<QuickRideRequestScreen> {
                             urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                             userAgentPackageName: 'com.example.campusgo',
                           ),
-                          if (_currentPickupLocation != null)
+                          if (_currentLocation != null)
                             CircleLayer(
                               circles: [
                                 CircleMarker(
-                                  point: LatLng(_currentPickupLocation!.latitude, _currentPickupLocation!.longitude),
+                                  point: LatLng(_currentLocation!.latitude, _currentLocation!.longitude),
                                   radius: 80,
                                   useRadiusInMeter: true,
                                   color: Colors.blue.withValues(alpha: 0.15),
@@ -322,7 +334,7 @@ class _QuickRideRequestScreenState extends State<QuickRideRequestScreen> {
                                 Polyline(
                                   points: _routePolyline,
                                   strokeWidth: 4,
-                                  color: AppColors.primary,
+                                  color: AppColors.success,
                                 ),
                               ],
                             ),
@@ -355,7 +367,7 @@ class _QuickRideRequestScreenState extends State<QuickRideRequestScreen> {
                                       focusNode: _searchFocusNode,
                                       style: const TextStyle(color: Colors.white, fontSize: 16),
                                       decoration: InputDecoration(
-                                        hintText: 'Where to?',
+                                        hintText: 'Where are you going?',
                                         hintStyle: TextStyle(color: Colors.grey[500], fontSize: 16),
                                         border: InputBorder.none,
                                         suffixIcon: _searchController.text.isNotEmpty
@@ -384,10 +396,6 @@ class _QuickRideRequestScreenState extends State<QuickRideRequestScreen> {
                                         }
                                       },
                                     ),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.person, color: Colors.black87),
-                                    onPressed: () => Navigator.pushNamed(context, '/profile'),
                                   ),
                                 ],
                               ),
@@ -442,10 +450,10 @@ class _QuickRideRequestScreenState extends State<QuickRideRequestScreen> {
                                               });
                                               FocusScope.of(context).unfocus();
                                               
-                                              if (_currentPickupLocation != null) {
+                                              if (_currentLocation != null) {
                                                 try {
                                                   final route = await _mapService.getRoute(
-                                                    _currentPickupLocation!,
+                                                    _currentLocation!,
                                                     result,
                                                   );
                                                   if (route != null && mounted) {
@@ -477,49 +485,6 @@ class _QuickRideRequestScreenState extends State<QuickRideRequestScreen> {
                           ],
                         ),
                       ),
-                      if (!_showSearchResults)
-                        Positioned(
-                          right: 16,
-                          bottom: _destinationLocation != null ? 200 : 100,
-                          child: Column(
-                            children: [
-                              FloatingActionButton(
-                                heroTag: 'location',
-                                mini: true,
-                                backgroundColor: Colors.white,
-                                onPressed: () {
-                                  if (_currentPickupLocation != null) {
-                                    _mapController.move(
-                                      LatLng(_currentPickupLocation!.latitude, _currentPickupLocation!.longitude),
-                                      16,
-                                    );
-                                  }
-                                },
-                                child: const Icon(Icons.my_location, color: Colors.blue),
-                              ),
-                              const SizedBox(height: 8),
-                              FloatingActionButton(
-                                heroTag: 'zoomIn',
-                                mini: true,
-                                backgroundColor: Colors.white,
-                                onPressed: () {
-                                  _mapController.move(_mapController.camera.center, _mapController.camera.zoom + 1);
-                                },
-                                child: const Icon(Icons.add, color: Colors.black87),
-                              ),
-                              const SizedBox(height: 8),
-                              FloatingActionButton(
-                                heroTag: 'zoomOut',
-                                mini: true,
-                                backgroundColor: Colors.white,
-                                onPressed: () {
-                                  _mapController.move(_mapController.camera.center, _mapController.camera.zoom - 1);
-                                },
-                                child: const Icon(Icons.remove, color: Colors.black87),
-                              ),
-                            ],
-                          ),
-                        ),
                       if (_destinationLocation != null && !_showSearchResults)
                         Positioned(
                           bottom: 0,
@@ -552,11 +517,11 @@ class _QuickRideRequestScreenState extends State<QuickRideRequestScreen> {
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                              'Pickup',
+                                              'Starting Point',
                                               style: TextStyle(color: Colors.grey[600], fontSize: 12),
                                             ),
                                             Text(
-                                              _currentPickupLocation?.displayName.split(',').first ?? 'Current Location',
+                                              _currentLocation?.displayName.split(',').first ?? 'Current Location',
                                               style: const TextStyle(
                                                 color: Colors.black87,
                                                 fontWeight: FontWeight.w600,
@@ -598,19 +563,51 @@ class _QuickRideRequestScreenState extends State<QuickRideRequestScreen> {
                                       ),
                                     ],
                                   ),
+                                  if (isCar) ...[
+                                    const SizedBox(height: 20),
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.airline_seat_recline_normal, color: AppColors.primary, size: 20),
+                                        const SizedBox(width: 12),
+                                        Text(
+                                          'Available Seats: $_availableSeats',
+                                          style: const TextStyle(
+                                            color: Colors.black87,
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                        const Spacer(),
+                                        IconButton(
+                                          onPressed: _availableSeats > 1
+                                              ? () => setState(() => _availableSeats--)
+                                              : null,
+                                          icon: const Icon(Icons.remove_circle_outline),
+                                          color: AppColors.primary,
+                                        ),
+                                        IconButton(
+                                          onPressed: _availableSeats < (profile?.carSeats ?? 4)
+                                              ? () => setState(() => _availableSeats++)
+                                              : null,
+                                          icon: const Icon(Icons.add_circle_outline),
+                                          color: AppColors.primary,
+                                        ),
+                                      ],
+                                    ),
+                                  ],
                                   const SizedBox(height: 20),
                                   SizedBox(
                                     width: double.infinity,
                                     height: 56,
                                     child: ElevatedButton(
-                                      onPressed: _requestRide,
+                                      onPressed: _startRiding,
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppColors.primary,
+                                        backgroundColor: AppColors.success,
                                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                                         elevation: 0,
                                       ),
                                       child: const Text(
-                                        'Request Ride',
+                                        'Start Riding',
                                         style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
                                       ),
                                     ),

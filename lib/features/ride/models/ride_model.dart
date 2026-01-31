@@ -19,6 +19,7 @@ class Ride {
   final String? riderName;
   final String origin;
   final String destination;
+  final String collegeDomain;
   final LocationPoint pickupPoint;
   final LocationPoint destinationPoint;
   final RideStatus status;
@@ -38,6 +39,7 @@ class Ride {
     this.riderName,
     required this.origin,
     required this.destination,
+    required this.collegeDomain,
     required this.pickupPoint,
     required this.destinationPoint,
     this.status = RideStatus.searching,
@@ -59,6 +61,7 @@ class Ride {
       'riderName': riderName,
       'origin': origin,
       'destination': destination,
+      'collegeDomain': collegeDomain,
       'pickupPoint': pickupPoint.toMap(),
       'destinationPoint': destinationPoint.toMap(),
       'status': status.name,
@@ -81,6 +84,7 @@ class Ride {
       riderName: map['riderName'],
       origin: map['origin'] ?? '',
       destination: map['destination'] ?? '',
+      collegeDomain: map['collegeDomain'] ?? '',
       pickupPoint: LocationPoint.fromMap(map['pickupPoint']),
       destinationPoint: LocationPoint.fromMap(map['destinationPoint']),
       status: RideStatus.values.firstWhere(
@@ -122,6 +126,7 @@ class Ride {
       riderName: riderName ?? this.riderName,
       origin: origin,
       destination: destination,
+      collegeDomain: collegeDomain,
       pickupPoint: pickupPoint,
       destinationPoint: destinationPoint,
       status: status ?? this.status,

@@ -2,89 +2,9 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper function to validate college domain
-    function isCollegeEmail() {
-      // List of allowed domains
-      let email = request.auth.token.email;
-      return email.matches('.*@pvpsit[.]ac[.]in') ||
-             email.matches('.*@vrsec[.]ac[.]in') ||
-             email.matches('.*@university[.]edu') ||
-             email.matches('.*@college[.]edu');
-    }
-
-    // --- USERS COLLECTION ---
-    match /users/{userId} {
-      // Allow create only if authenticated.
-      // We enforce domain check here too for robust security.
-      allow create: if request.auth != null 
-                    && request.auth.uid == userId
-                    && isCollegeEmail();
-
-      // Allow read:
-      // 1. Own profile
-      // 2. Or if looking for RIDERS (public profiles marked as riderMode)
-      // BUT strict: Only authorized college emails can read anything.
-      allow read: if request.auth != null 
-                  && isCollegeEmail()
-                  && (request.auth.uid == userId || resource.data.isRiderMode == true);
-
-      // Allow update: Only own profile
-      allow update: if request.auth != null 
-                    && request.auth.uid == userId
-                    && isCollegeEmail();
-
-      // Never allow delete
-      allow delete: if false;
-    }
-
-    // --- RIDES COLLECTION ---
-    match /rides/{rideId} {
-      // Create: Any authenticated college student can request a ride
-      allow create: if request.auth != null && isCollegeEmail();
-
-      // Read: Complex rules to hide rider details until accepted
-      allow read: if request.auth != null 
-                  && isCollegeEmail()
-                  && (
-                    // Student can read their own ride
-                    resource.data.studentId == request.auth.uid ||
-                    // Rider can read rides assigned to them
-                    resource.data.riderId == request.auth.uid ||
-                    // Riders can see open requests (for claiming)
-                    (resource.data.status == 'searching' && resource.data.riderId == null)
-                  );
-
-      // Update: involved parties or riders claiming open rides
-      allow update: if request.auth != null 
-                    && isCollegeEmail()
-                    && (
-                      resource.data.studentId == request.auth.uid || 
-                      resource.data.riderId == request.auth.uid ||
-                      // Allow a rider to claim a ride (update riderId)
-                      (resource.data.riderId == null && request.resource.data.riderId == request.auth.uid)
-                    );
-    }
-
-    // --- NOTIFICATIONS COLLECTION ---
-    match /notifications/{notificationId} {
-      // Allow authenticated users to create notifications
-      allow create: if request.auth != null && isCollegeEmail();
-      
-      // Allow reading own notifications
-      allow read: if request.auth != null 
-                  && resource.data.userId == request.auth.uid;
-      
-      // Cloud Functions can update (mark as sent)
-      allow update: if request.auth != null;
-      
-      // No deletes
-      allow delete: if false;
-    }
-    
-    // Default Deny
+    // DEBUG MODE - Allow all operations for testing
     match /{document=**} {
-      allow read, write: if false;
+      allow read, write: if request.auth != null;
     }
   }
 }

@@ -19,9 +19,7 @@ class _OsmLiveTrackingScreenState extends State<OsmLiveTrackingScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<RideTrackingProvider>().startTracking();
-    });
+    // Tracking will be started from ride_home_screen when ride is accepted
   }
 
   @override
@@ -40,61 +38,95 @@ class _OsmLiveTrackingScreenState extends State<OsmLiveTrackingScreen> {
       body: Consumer2<RideTrackingProvider, RideProvider>(
         builder: (context, trackingProvider, rideProvider, _) {
           final ride = rideProvider.activeRide;
-          final currentLocation = trackingProvider.currentLocation;
-
+          
           if (ride == null) {
             return const Center(child: Text('No active ride'));
           }
 
           final markers = <Marker>[];
-          final polylines = <Polyline>[];
-
-          if (currentLocation != null) {
+          
+          // Get rider and student locations from real-time tracking
+          LatLng? riderLocation;
+          LatLng? studentLocation;
+          
+          if (ride.riderId != null) {
+            riderLocation = trackingProvider.getRiderLocation(ride.riderId!);
+          }
+          studentLocation = trackingProvider.getStudentLocation(ride.studentId);
+          
+          // Add rider marker (motorcycle icon)
+          if (riderLocation != null) {
             markers.add(
               Marker(
-                point: currentLocation,
-                width: 40,
-                height: 40,
-                child: const Icon(
-                  Icons.motorcycle,
-                  color: AppColors.primary,
-                  size: 40,
+                point: riderLocation,
+                width: 50,
+                height: 50,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 3),
+                  ),
+                  child: const Icon(
+                    Icons.motorcycle,
+                    color: Colors.white,
+                    size: 28,
+                  ),
+                ),
+              ),
+            );
+          }
+          
+          // Add student marker (person icon)
+          if (studentLocation != null) {
+            markers.add(
+              Marker(
+                point: studentLocation,
+                width: 50,
+                height: 50,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.success,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 3),
+                  ),
+                  child: const Icon(
+                    Icons.person,
+                    color: Colors.white,
+                    size: 28,
+                  ),
                 ),
               ),
             );
           }
 
-          if (trackingProvider.destinationLocation != null) {
-            markers.add(
-              Marker(
-                point: trackingProvider.destinationLocation!,
-                width: 40,
-                height: 40,
-                child: const Icon(
-                  Icons.location_on,
-                  color: Colors.red,
-                  size: 40,
-                ),
+          // Add destination marker
+          markers.add(
+            Marker(
+              point: LatLng(
+                ride.destinationPoint.latitude,
+                ride.destinationPoint.longitude,
               ),
-            );
-          }
-
-          if (trackingProvider.routePolyline.isNotEmpty) {
-            polylines.add(
-              Polyline(
-                points: trackingProvider.routePolyline,
-                color: AppColors.primary,
-                strokeWidth: 5,
+              width: 50,
+              height: 50,
+              child: const Icon(
+                Icons.location_on,
+                color: Colors.red,
+                size: 50,
               ),
-            );
-          }
+            ),
+          );
+          
+          // Use rider location or student location as center
+          final centerLocation = riderLocation ?? studentLocation ?? 
+              LatLng(ride.pickupPoint.latitude, ride.pickupPoint.longitude);
 
           return Stack(
             children: [
               FlutterMap(
                 mapController: _mapController,
                 options: MapOptions(
-                  initialCenter: currentLocation ?? const LatLng(28.6139, 77.2090),
+                  initialCenter: centerLocation,
                   initialZoom: 15,
                   minZoom: 10,
                   maxZoom: 18,
@@ -116,15 +148,27 @@ class _OsmLiveTrackingScreenState extends State<OsmLiveTrackingScreen> {
                         ),
                       ],
                     ),
-                  if (currentLocation != null)
+                  if (riderLocation != null)
                     CircleLayer(
                       circles: [
                         CircleMarker(
-                          point: currentLocation,
+                          point: riderLocation,
+                          radius: 15,
+                          color: AppColors.primary.withValues(alpha: 0.3),
+                          borderColor: AppColors.primary,
+                          borderStrokeWidth: 2,
+                        ),
+                      ],
+                    ),
+                  if (studentLocation != null)
+                    CircleLayer(
+                      circles: [
+                        CircleMarker(
+                          point: studentLocation,
                           radius: 12,
-                          color: AppColors.primary,
-                          borderColor: Colors.white,
-                          borderStrokeWidth: 3,
+                          color: AppColors.success.withValues(alpha: 0.3),
+                          borderColor: AppColors.success,
+                          borderStrokeWidth: 2,
                         ),
                       ],
                     ),

@@ -1,68 +1,97 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
-import '../../../core/services/real_location_service.dart';
+import '../../../core/services/real_time_location_service.dart';
+import '../models/ride_model.dart';
 
 class RideTrackingProvider extends ChangeNotifier {
-  final RealLocationService _locationService = RealLocationService();
-  StreamSubscription<LatLng>? _locationSubscription;
-
-  LatLng? _currentRiderLocation;
-  LatLng? get currentLocation => _currentRiderLocation;
-
+  final RealTimeLocationService _realTimeLocationService = RealTimeLocationService();
+  
+  LatLng? _currentLocation;
   LatLng? _destinationLocation;
-  LatLng? get destinationLocation => _destinationLocation;
-
   List<LatLng> _routePolyline = [];
+  int _estimatedTimeMinutes = 0;
+  Map<String, dynamic>? _rideLocations;
+  StreamSubscription? _locationSubscription;
+  
+  LatLng? get currentLocation => _currentLocation;
+  LatLng? get destinationLocation => _destinationLocation;
   List<LatLng> get routePolyline => _routePolyline;
-
-  bool _isTracking = false;
-  bool get isTracking => _isTracking;
-
-  int _estimatedTimeMinutes = 5;
   int get estimatedTimeMinutes => _estimatedTimeMinutes;
+  Map<String, dynamic>? get rideLocations => _rideLocations;
+  bool get isTracking => _realTimeLocationService.isTracking;
 
-  void startTracking() async {
-    if (_isTracking) return;
-
-    try {
-      _isTracking = true;
-      await _locationService.startTracking();
-
-      _locationSubscription = _locationService.locationStream.listen((location) {
-        _currentRiderLocation = location;
-        _calculateETA();
-        notifyListeners();
-      });
-
-      final currentLoc = await _locationService.getCurrentLocation();
-      if (currentLoc != null) {
-        _currentRiderLocation = currentLoc;
-        notifyListeners();
+  Future<void> startTracking(String userId, String rideId, Ride ride) async {
+    _destinationLocation = LatLng(
+      ride.destinationPoint.latitude,
+      ride.destinationPoint.longitude,
+    );
+    
+    await _realTimeLocationService.startTracking(userId, rideId);
+    
+    _locationSubscription = _realTimeLocationService
+        .getRideLocations(rideId)
+        .listen((locations) {
+      _rideLocations = locations;
+      
+      if (locations != null && locations.containsKey(userId)) {
+        final userLocation = locations[userId];
+        _currentLocation = LatLng(
+          userLocation['latitude'],
+          userLocation['longitude'],
+        );
       }
-    } catch (e) {
-      _isTracking = false;
-      debugPrint('Location tracking error: $e');
-    }
-  }
-
-  void stopTracking() {
-    _isTracking = false;
-    _locationSubscription?.cancel();
-    _locationService.stopTracking();
-    _routePolyline = [];
-    _currentRiderLocation = null;
-    _destinationLocation = null;
+      
+      notifyListeners();
+    });
+    
     notifyListeners();
   }
-
-  void _calculateETA() {
-    _estimatedTimeMinutes = 5;
+  
+  LatLng? getRiderLocation(String riderId) {
+    if (_rideLocations == null || !_rideLocations!.containsKey(riderId)) {
+      return null;
+    }
+    
+    final riderData = _rideLocations![riderId];
+    return LatLng(riderData['latitude'], riderData['longitude']);
   }
-
+  
+  LatLng? getStudentLocation(String studentId) {
+    if (_rideLocations == null || !_rideLocations!.containsKey(studentId)) {
+      return null;
+    }
+    
+    final studentData = _rideLocations![studentId];
+    return LatLng(studentData['latitude'], studentData['longitude']);
+  }
+  
+  void updateRoute(List<LatLng> polyline) {
+    _routePolyline = polyline;
+    notifyListeners();
+  }
+  
+  void updateETA(int minutes) {
+    _estimatedTimeMinutes = minutes;
+    notifyListeners();
+  }
+  
+  void stopTracking() {
+    _realTimeLocationService.stopTracking();
+    _locationSubscription?.cancel();
+    _locationSubscription = null;
+    _rideLocations = null;
+    _currentLocation = null;
+    _destinationLocation = null;
+    _routePolyline = [];
+    _estimatedTimeMinutes = 0;
+    notifyListeners();
+  }
+  
   @override
   void dispose() {
     stopTracking();
+    _realTimeLocationService.dispose();
     super.dispose();
   }
 }

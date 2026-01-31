@@ -7,6 +7,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../profile/providers/profile_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/ride_provider.dart';
+import '../providers/osm_ride_tracking_provider.dart';
 import '../models/ride_model.dart';
 import 'osm_live_tracking_screen.dart';
 import 'ride_request_intermediate_screen.dart';
@@ -185,6 +186,10 @@ class _RideHomeScreenState extends State<RideHomeScreen> {
                   icon: const Icon(Icons.bug_report),
                   onPressed: () => context.push('/rider-debug'),
                 ),
+                IconButton(
+                  icon: const Icon(Icons.add_circle),
+                  onPressed: () => context.push('/create-riders'),
+                ),
               ],
             ),
             body: const RideRequestIntermediateScreen(),
@@ -231,11 +236,23 @@ class _RideHomeScreenState extends State<RideHomeScreen> {
 
   Widget _buildActiveRideView(BuildContext context) {
     final rideProvider = context.watch<RideProvider>();
+    final trackingProvider = context.watch<RideTrackingProvider>();
     final ride = rideProvider.activeRide;
-    final isRider =
-        context.read<ProfileProvider>().profile?.isRiderMode ?? false;
+    final profile = context.read<ProfileProvider>().profile;
+    final isRider = profile?.isRiderMode ?? false;
 
     if (ride == null) return const SizedBox.shrink();
+
+    // Start tracking when ride is accepted
+    if (ride.status == RideStatus.accepted && !trackingProvider.isTracking) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        trackingProvider.startTracking(
+          profile!.id,
+          ride.id,
+          ride,
+        );
+      });
+    }
 
     String statusMsg = '';
     IconData statusIcon = Icons.directions_car;
@@ -724,8 +741,18 @@ class _RideHomeScreenState extends State<RideHomeScreen> {
                               const SizedBox(width: 12),
                               Expanded(
                                 child: ElevatedButton.icon(
-                                  onPressed: () =>
-                                      context.read<RideProvider>().acceptRide(req),
+                                  onPressed: () async {
+                                    final profile = context.read<ProfileProvider>().profile;
+                                    await context.read<RideProvider>().acceptRide(req);
+                                    // Start tracking after accepting
+                                    if (mounted && profile != null) {
+                                      context.read<RideTrackingProvider>().startTracking(
+                                        profile.id,
+                                        req.id,
+                                        req,
+                                      );
+                                    }
+                                  },
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: AppColors.success,
                                     padding: const EdgeInsets.symmetric(
